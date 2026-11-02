@@ -1,0 +1,650 @@
+
+/* GENEL AYARLAR */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #080c08;
+    color: white;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ANA MENÜ */
+.main-menu {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 15px;
+    position: relative;
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.82)),
+        url("images/anamenu.jpg") center / cover no-repeat;
+}
+
+.menu-content {
+    width: 100%;
+    max-width: 1050px;
+    padding: 30px;
+    text-align: center;
+    background: rgba(5, 10, 6, 0.78);
+    border: 1px solid rgba(150, 170, 140, 0.25);
+    border-radius: 12px;
+    backdrop-filter: blur(5px);
+}
+
+.menu-content h1 {
+    font-size: clamp(35px, 6vw, 65px);
+    letter-spacing: 5px;
+    color: #e8e8e8;
+    margin-bottom: 8px;
+}
+
+.menu-content h1 span {
+    color: #8b2424;
+}
+
+.menu-subtitle {
+    color: #aaa;
+    letter-spacing: 4px;
+    font-size: 13px;
+    margin-bottom: 28px;
+}
+
+.menu-content h2 {
+    font-size: 21px;
+    color: #d6d6d6;
+    margin: 22px 0 14px;
+}
+
+/* KARAKTER VE SİLAH SEÇİMİ */
+.selection-list {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.selection-card {
+    width: 190px;
+    height: 180px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    background: #141b15;
+    border: 2px solid #394239;
+    border-radius: 9px;
+    color: white;
+    transition: 0.2s;
+}
+
+.selection-card:hover {
+    transform: translateY(-5px);
+    border-color: #a5a5a5;
+}
+
+.selection-card.selected {
+    border: 3px solid #a52a2a;
+    box-shadow: 0 0 18px rgba(165, 42, 42, 0.65);
+}
+
+.selection-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: contain;
+    padding: 8px;
+    display: block;
+}
+
+.selection-card span {
+    display: block;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.weapon-list .selection-card {
+    height: 155px;
+}
+
+.weapon-list .selection-card img {
+    height: 115px;
+}
+
+/* OYUNA BAŞLA */
+.start-button {
+    margin-top: 30px;
+    padding: 16px 55px;
+    background: #8b2424;
+    border: 1px solid #c64a4a;
+    border-radius: 6px;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.start-button:hover {
+    background: #bd3030;
+    transform: scale(1.04);
+}
+
+/* LAST HAVEN MAĞAZA KARTI */
+.store-link {
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 190px;
+    text-decoration: none;
+    z-index: 10;
+    display: block;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 2px solid #52634a;
+    background: #101510;
+    transition: 0.3s ease;
+}
+
+.store-link:hover {
+    transform: translateY(-50%) scale(1.05);
+    border-color: #8da66c;
+    box-shadow: 0 0 18px rgba(141, 166, 108, 0.5);
+}
+
+.store-image {
+    position: relative;
+    width: 100%;
+    height: 125px;
+    overflow: hidden;
+}
+
+.store-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.store-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.48);
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.store-status {
+    text-align: center;
+    padding: 10px 5px;
+    color: #c7d9a4;
+    font-size: 13px;
+    font-weight: bold;
+    background: #101510;
+}
+
+/* İLETİŞİM BÖLÜMÜ */
+.contact-section {
+    position: absolute;
+    bottom: 15px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    z-index: 10;
+}
+
+.contact-title {
+    color: #ffffff;
+    font-size: 15px;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.contact-links {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.contact-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #ffffff;
+    text-decoration: none;
+    transition: 0.3s ease;
+}
+
+.contact-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.contact-link p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.contact-link:hover {
+    transform: scale(1.1);
+    color: #ff3333;
+}
+
+/* OYUN ALANI */
+.game-container {
+    width: 1200px;
+    max-width: 95vw;
+    margin: 30px auto;
+    position: relative;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 15px 20px;
+    background: #151c15;
+    border: 1px solid #293329;
+    border-bottom: none;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 15 / 8;
+    display: block;
+    background: #182018;
+    border: 1px solid #293329;
+    cursor: crosshair;
+}
+
+/* OYUN KONTROLLERİ */
+.game-controls {
+    position: absolute;
+    right: 25px;
+    bottom: 20px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#pauseButton,
+#musicButton {
+    padding: 12px 20px;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+#pauseButton {
+    background: #a52a2a;
+    border: 1px solid #ff5555;
+}
+
+#pauseButton:hover {
+    background: #d32f2f;
+}
+
+#musicButton {
+    background: #354b35;
+    border: 1px solid #718b65;
+}
+
+#musicButton:hover {
+    background: #526d4d;
+}
+
+/* DURAKLATMA EKRANI */
+.pause-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+}
+
+.pause-screen h1 {
+    color: white;
+    font-size: 42px;
+    letter-spacing: 3px;
+}
+
+.pause-screen button {
+    min-width: 220px;
+    padding: 14px 20px;
+    background: #a52a2a;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.pause-screen button:hover {
+    background: #d32f2f;
+    transform: scale(1.05);
+}
+
+/* OYUN SONU */
+.game-over {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 40px;
+    text-align: center;
+    border: 2px solid #a52a2a;
+    border-radius: 12px;
+    z-index: 40;
+    min-width: 280px;
+}
+
+.game-over h1 {
+    color: #e53935;
+    margin-bottom: 15px;
+}
+
+.game-over p {
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+.game-over button {
+    padding: 12px 20px;
+    margin: 5px;
+    background: #a52a2a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.game-over button:hover {
+    background: #d32f2f;
+}
+
+/* MOBİL UYUMLULUK */
+@media (max-width: 650px) {
+    .menu-content {
+        padding: 20px 10px;
+    }
+
+    .selection-list {
+        gap: 10px;
+    }
+
+    .selection-card {
+        width: 130px;
+        height: 145px;
+    }
+
+    .selection-card img {
+        height: 105px;
+    }
+
+    .weapon-list .selection-card {
+        height: 125px;
+    }
+
+    .weapon-list .selection-card img {
+        height: 85px;
+    }
+
+    .store-link {
+        width: 125px;
+        left: 8px;
+        top: 12px;
+        transform: none;
+    }
+
+    .store-link:hover {
+        transform: scale(1.03);
+    }
+
+    .store-image {
+        height: 85px;
+    }
+
+    .store-overlay {
+        font-size: 11px;
+        padding: 5px;
+    }
+
+    .store-status {
+        font-size: 10px;
+    }
+
+    .game-info {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    #pauseButton,
+    #musicButton {
+        padding: 9px 12px;
+        font-size: 12px;
+    }
+
+    .game-controls {
+        right: 10px;
+        bottom: 10px;
+        gap: 6px;
+    }
+}
+
+/* MOBİL OYUN KONTROLLERİ */
+.mobile-controls {
+    display: none;
+}
+
+.orientation-warning {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #080c08;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 25px;
+}
+
+.orientation-warning > div {
+    max-width: 350px;
+}
+
+.orientation-warning span {
+    display: block;
+    font-size: 55px;
+    margin-bottom: 20px;
+}
+
+.orientation-warning h2 {
+    color: #c7d9a4;
+    margin-bottom: 12px;
+}
+
+.orientation-warning p {
+    color: #ccc;
+    line-height: 1.5;
+}
+
+/* Dokunmatik cihazlar */
+@media (pointer: coarse) {
+    body {
+        overscroll-behavior: none;
+    }
+
+    .game-container {
+        width: 100vw;
+        max-width: 100vw;
+        margin: 0;
+    }
+
+    .game-info {
+        padding: 5px 10px;
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 15 / 8;
+        touch-action: none;
+        cursor: default;
+    }
+
+    .mobile-controls {
+        display: block;
+        position: absolute;
+        inset: 0;
+        z-index: 15;
+        pointer-events: none;
+    }
+
+    .joystick-area {
+        position: absolute;
+        left: 22px;
+        bottom: 22px;
+        width: 130px;
+        height: 130px;
+        pointer-events: auto;
+        touch-action: none;
+    }
+
+    .joystick-base {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(210, 220, 210, 0.18);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .joystick-stick {
+        width: 55px;
+        height: 55px;
+        border-radius: 50%;
+        background: rgba(220, 230, 220, 0.65);
+        border: 2px solid white;
+        transform: translate(0, 0);
+    }
+
+    .fire-button {
+        position: absolute;
+        right: 25px;
+        bottom: 35px;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        border: 3px solid #ff7777;
+        background: rgba(165, 42, 42, 0.85);
+        color: white;
+        font-size: 17px;
+        font-weight: bold;
+        pointer-events: auto;
+        touch-action: none;
+        user-select: none;
+    }
+
+    .fire-button:active {
+        background: #e53935;
+        transform: scale(0.95);
+    }
+
+    .game-controls {
+        top: 48px;
+        right: 8px;
+        bottom: auto;
+        gap: 5px;
+    }
+
+    #pauseButton,
+    #musicButton {
+        padding: 7px 10px;
+        font-size: 11px;
+    }
+
+    .pause-screen h1 {
+        font-size: 25px;
+        text-align: center;
+    }
+
+    .game-over {
+        width: 90%;
+        min-width: 0;
+        padding: 20px;
+    }
+}
+
+/* Telefon yatay konumdayken */
+@media (pointer: coarse) and (orientation: landscape) {
+    .game-container {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    #gameCanvas {
+        width: 100%;
+        max-height: calc(100dvh - 35px);
+        object-fit: contain;
+    }
+
+    .game-info {
+        flex-shrink: 0;
+    }
+}
+
+/* Telefon dikey konumdayken */
+@media (pointer: coarse) and (orientation: portrait) {
+    body:has(.game-container:not(.hidden)) .orientation-warning {
+        display: flex !important;
+    }
+
+    body:has(.game-container:not(.hidden)) {
+        overflow: hidden;
+    }
+}

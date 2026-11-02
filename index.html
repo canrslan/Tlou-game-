@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080c08">
+    <title>Zombie Survival</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ANA MENÜ -->
+    <div class="main-menu" id="mainMenu">
+        <div class="menu-content">
+            <h1>THE LAST <span>OF US III</span></h1>
+            <p class="menu-subtitle">HAYATTA KALMAK İÇİN SAVAŞ</p>
+
+            <!-- KARAKTER SEÇİMİ -->
+            <h2>Karakterini Seç</h2>
+            <div class="selection-list" id="characterSelection">
+                <button class="selection-card selected" data-character="player">
+                    <img src="images/player.png" alt="Can">
+                    <span>Can</span>
+                </button>
+
+                <button class="selection-card" data-character="ellie">
+                    <img src="images/ellie.png" alt="Ellie">
+                    <span>Ellie</span>
+                </button>
+
+                <button class="selection-card" data-character="joel">
+                    <img src="images/joel.png" alt="Joel">
+                    <span>Joel</span>
+                </button>
+            </div>
+
+            <!-- SİLAH SEÇİMİ -->
+            <h2>Silahını Seç</h2>
+            <div class="selection-list weapon-list" id="weaponSelection">
+                <button class="selection-card selected" data-weapon="pistol">
+                    <img src="images/tabanca.png" alt="Tabanca">
+                    <span>Tabanca</span>
+                </button>
+
+                <button class="selection-card" data-weapon="shotgun">
+                    <img src="images/pompalı.png" alt="Pompalı">
+                    <span>Pompalı</span>
+                </button>
+
+                <button class="selection-card" data-weapon="rifle">
+                    <img src="images/taramalı.png" alt="Taramalı">
+                    <span>Taramalı</span>
+                </button>
+            </div>
+
+            <!-- OYUNA BAŞLA -->
+            <button id="startButton" class="start-button">
+                OYUNA BAŞLA
+            </button>
+        </div>
+
+        <!-- LAST HAVEN MAĞAZA BAĞLANTISI -->
+        <a href="https://canrslan.github.io/tlou-web-site/"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="store-link">
+
+            <div class="store-image">
+                <img src="images/sitelink.png" alt="Last Haven Mağazası">
+                <div class="store-overlay">
+                    <span>Mağazamızı ziyaret etmek için tıklayın</span>
+                </div>
+            </div>
+
+            <div class="store-status">
+                Gelişme Aşamasında!!!
+            </div>
+        </a>
+
+        <!-- İLETİŞİM BÖLÜMÜ -->
+        <div class="contact-section">
+            <h2 class="contact-title">İLETİŞİME GEÇİN</h2>
+
+            <div class="contact-links">
+
+                <!-- WHATSAPP -->
+                <a href="https://wa.me/905076780957"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="contact-link">
+
+                    <svg class="contact-icon whatsapp-icon" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M20.52 3.48A11.82 11.82 0 0 0 12.08 0C5.53 0 .2 5.33.2 11.88c0 2.09.55 4.13 1.59 5.93L.1 24l6.34-1.66a11.9 11.9 0 0 0 5.64 1.43h.01c6.55 0 11.88-5.33 11.88-11.88 0-3.17-1.24-6.15-3.45-8.41ZM12.09 21.7h-.01a9.83 9.83 0 0 1-5.01-1.37l-.36-.21-3.76.99 1-3.67-.24-.38a9.82 9.82 0 0 1-1.51-5.18c0-5.44 4.43-9.87 9.88-9.87a9.8 9.8 0 0 1 6.98 2.89 9.8 9.8 0 0 1 2.89 6.99c0 5.44-4.43 9.87-9.86 9.87Zm5.42-7.39c-.3-.15-1.77-.87-2.05-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.47-2.4-1.48-.89-.8-1.49-1.78-1.66-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.09 4.5.71.31 1.26.5 1.69.64.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.08-.13-.27-.2-.57-.35Z"/>
+                    </svg>
+                    <p>WhatsApp</p>
+                </a>
+
+                <!-- GMAIL -->
+                <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=arslanby5757@gmail.com"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="contact-link">
+
+                    <svg class="contact-icon gmail-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M3 5.5 12 12l9-6.5V19h-4V11l-5 3.6L7 11v8H3z"/>
+                        <path fill="#EA4335" d="M3 5.5V5c0-1.1 1.3-1.8 2.2-1.1L12 9.5l6.8-5.6C19.7 3.2 21 3.9 21 5v.5L12 12z"/>
+                        <path fill="#34A853" d="M3 5.5 7 8.4V19H3z"/>
+                        <path fill="#FBBC04" d="M17 8.4 21 5.5V19h-4z"/>
+                    </svg>
+                    <p>Gmail</p>
+                </a>
+
+                <!-- INSTAGRAM -->
+                <a href="https://instagram.com/ac.rsln"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="contact-link">
+
+                    <svg class="contact-icon instagram-icon" viewBox="0 0 24 24">
+                        <defs>
+                            <linearGradient id="instaGradient" x1="0" y1="1" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#FFD600"/>
+                                <stop offset="50%" stop-color="#FF0069"/>
+                                <stop offset="100%" stop-color="#7638FA"/>
+                            </linearGradient>
+                        </defs>
+
+                        <rect x="2" y="2" width="20" height="20" rx="6"
+                              fill="none" stroke="url(#instaGradient)" stroke-width="2.5"/>
+                        <circle cx="12" cy="12" r="4.5"
+                                fill="none" stroke="url(#instaGradient)" stroke-width="2"/>
+                        <circle cx="18" cy="6" r="1.3" fill="#FF0069"/>
+                    </svg>
+                    <p>Instagram</p>
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- OYUN EKRANI -->
+    <div class="game-container hidden" id="gameContainer">
+
+        <div class="game-info">
+            <span>❤️ Can: <strong id="health">100</strong></span>
+            <span>🔫 Mermi: <strong id="ammo">30</strong></span>
+            <span>🧟 Wave: <strong id="wave">1</strong></span>
+            <span>⭐ Puan: <strong id="score">0</strong></span>
+        </div>
+
+        <!-- OYUN CANVAS -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- MOBİL KONTROLLER -->
+        <div class="mobile-controls" id="mobileControls">
+
+            <div class="joystick-area" id="joystickArea">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="joystickStick"></div>
+                </div>
+            </div>
+
+            <button id="fireButton" class="fire-button">
+                ATEŞ
+            </button>
+
+        </div>
+
+        <!-- OYUN KONTROLLERİ -->
+        <div class="game-controls">
+            <button id="musicButton">🔊</button>
+            <button id="pauseButton">⏸ Oyunu Duraklat</button>
+        </div>
+
+        <!-- DURAKLATMA EKRANI -->
+        <div id="pauseScreen" class="pause-screen hidden">
+            <h1>OYUN DURAKLATILDI</h1>
+            <button id="resumeButton">▶ Oyuna Devam Et</button>
+            <button id="pauseMenuButton">Ana Menüye Dön</button>
+        </div>
+
+        <!-- OYUN SONU -->
+        <div id="gameOverScreen" class="game-over hidden">
+            <h1>GAME OVER</h1>
+            <p>Skorun: <span id="finalScore">0</span></p>
+            <button id="restartButton">Yeniden Başla</button>
+            <button id="menuButton">Ana Menü</button>
+        </div>
+
+    </div>
+
+    <!-- OYUN MÜZİKLERİ -->
+    <audio id="music1" src="unbroken.mp3" preload="auto"></audio>
+    <audio id="music2" src="longing.mp3" preload="auto"></audio>
+
+    <!-- DİKEY EKRAN UYARISI -->
+    <div id="orientationWarning" class="orientation-warning hidden">
+        <div>
+            <span>📱 ↻</span>
+            <h2>Lütfen telefonunu yatay çevir</h2>
+            <p>Zombie Survival yatay ekranda oynanmak üzere tasarlandı.</p>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT EN SONDA ÇALIŞIR -->
+    <script src="game.js"></script>
+
+</body>
+</html>
