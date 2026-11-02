@@ -22,9 +22,10 @@ body {
     min-height: 100vh;
     width: 100%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 30px 15px;
+    padding: 30px 15px 75px;
     position: relative;
     background:
         linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.82)),
@@ -402,8 +403,39 @@ body {
 
 /* MOBİL UYUMLULUK */
 @media (max-width: 650px) {
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .main-menu {
+        min-height: 100vh;
+        height: auto;
+        justify-content: flex-start;
+        padding: 20px 12px 25px;
+        gap: 18px;
+        overflow: visible;
+    }
+
     .menu-content {
+        width: 100%;
         padding: 20px 10px;
+    }
+
+    .menu-content h1 {
+        font-size: clamp(27px, 7vw, 38px);
+        letter-spacing: 2px;
+    }
+
+    .menu-subtitle {
+        font-size: 10px;
+        letter-spacing: 2px;
+        margin-bottom: 18px;
+    }
+
+    .menu-content h2 {
+        font-size: 18px;
+        margin: 17px 0 12px;
     }
 
     .selection-list {
@@ -411,44 +443,99 @@ body {
     }
 
     .selection-card {
-        width: 130px;
-        height: 145px;
+        width: min(28vw, 130px);
+        height: 135px;
     }
 
     .selection-card img {
-        height: 105px;
+        height: 100px;
+    }
+
+    .selection-card span {
+        font-size: 12px;
+        padding: 7px 3px;
     }
 
     .weapon-list .selection-card {
-        height: 125px;
+        height: 120px;
     }
 
     .weapon-list .selection-card img {
         height: 85px;
     }
 
+    .start-button {
+        margin-top: 22px;
+        padding: 14px 35px;
+        font-size: 17px;
+    }
+
+    /* Mağaza artık seçimlerin üstüne binmez */
     .store-link {
-        width: 125px;
-        left: 8px;
-        top: 12px;
+        position: relative;
+        top: auto;
+        left: auto;
         transform: none;
+        width: min(220px, 75%);
+        margin: 0 auto;
+        flex-shrink: 0;
     }
 
     .store-link:hover {
-        transform: scale(1.03);
+        transform: scale(1.02);
     }
 
     .store-image {
-        height: 85px;
+        height: 110px;
     }
 
     .store-overlay {
-        font-size: 11px;
-        padding: 5px;
+        font-size: 12px;
+        padding: 8px;
     }
 
     .store-status {
-        font-size: 10px;
+        font-size: 11px;
+    }
+
+    /* İletişim menünün altında kalır */
+    .contact-section {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 0;
+        padding: 10px 5px;
+    }
+
+    .contact-title {
+        font-size: 14px;
+    }
+
+    .contact-links {
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .contact-link {
+        gap: 4px;
+    }
+
+    .contact-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .contact-link p {
+        font-size: 11px;
+    }
+
+    .game-container {
+        width: 100vw;
+        max-width: 100vw;
+        margin: 0;
     }
 
     .game-info {
@@ -507,8 +594,9 @@ body {
     line-height: 1.5;
 }
 
-/* Dokunmatik cihazlar */
+/* DOKUNMATİK CİHAZLAR */
 @media (pointer: coarse) {
+
     body {
         overscroll-behavior: none;
     }
@@ -618,8 +706,9 @@ body {
     }
 }
 
-/* Telefon yatay konumdayken */
+/* TELEFON YATAY KONUMDAYKEN */
 @media (pointer: coarse) and (orientation: landscape) {
+
     .game-container {
         height: 100dvh;
         display: flex;
@@ -638,8 +727,9 @@ body {
     }
 }
 
-/* Telefon dikey konumdayken */
+/* TELEFON DİKEY KONUMDAYKEN */
 @media (pointer: coarse) and (orientation: portrait) {
+
     body:has(.game-container:not(.hidden)) .orientation-warning {
         display: flex !important;
     }
