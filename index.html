@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -38,6 +37,15 @@
                     <img src="images/joel.png" alt="Joel">
                     <span>Joel</span>
                 </button>
+            </div>
+
+            <!-- KARAKTER BİLGİ KUTUSU -->
+            <div class="character-info" id="characterInfo">
+                <div class="character-info-header">
+                    <h3 id="characterInfoName"></h3>
+                    <span id="characterInfoRole"></span>
+                </div>
+                <p id="characterInfoStory"></p>
             </div>
 
             <!-- SİLAH SEÇİMİ -->
@@ -173,7 +181,7 @@
 
         <div class="game-info">
             <span>❤️ Can: <strong id="health">100</strong></span>
-            <span>🔫 Mermi: <strong id="ammo">30</strong></span>
+            <span>🔫 Mermi: <strong id="ammo">12 / 36</strong></span>
             <span>🧟 Wave: <strong id="wave">1</strong></span>
             <span>⭐ Puan: <strong id="score">0</strong></span>
         </div>
@@ -189,6 +197,8 @@
                     <div class="joystick-stick" id="joystickStick"></div>
                 </div>
             </div>
+
+            <button id="reloadButton" class="reload-button">R</button>
 
             <button id="fireButton" class="fire-button">
                 ATEŞ
@@ -218,10 +228,6 @@
         </div>
 
     </div>
-
-    <!-- OYUN MÜZİKLERİ -->
-    <audio id="music1" src="unbroken.mp3" preload="auto"></audio>
-    <audio id="music2" src="longing.mp3" preload="auto"></audio>
 
     <!-- DİKEY EKRAN UYARISI -->
     <div id="orientationWarning" class="orientation-warning hidden">

@@ -1,4 +1,3 @@
-
 /* GENEL AYARLAR */
 * {
     margin: 0;
@@ -736,5 +735,91 @@ body {
 
     body:has(.game-container:not(.hidden)) {
         overflow: hidden;
+    }
+}
+
+
+/* YENİDEN DOLDURMA BUTONU (MOBİL) */
+.reload-button {
+    position: absolute;
+    right: 130px;
+    bottom: 45px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 3px solid #e0c060;
+    background: rgba(90, 75, 20, 0.85);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+}
+
+.reload-button:active {
+    background: #c9a227;
+    transform: scale(0.95);
+}
+
+
+/* KARAKTER BİLGİ KUTUSU */
+.character-info {
+    max-width: 640px;
+    margin: 18px auto 0;
+    padding: 14px 18px;
+    text-align: left;
+    background: rgba(20, 27, 21, 0.85);
+    border: 1px solid #394239;
+    border-left: 4px solid #a52a2a;
+    border-radius: 8px;
+    animation: infoFade 0.3s ease;
+}
+
+@keyframes infoFade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.character-info-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.character-info-header h3 {
+    font-size: 20px;
+    color: #e8e8e8;
+    letter-spacing: 1px;
+}
+
+.character-info-header span {
+    font-size: 12px;
+    color: #c7d9a4;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.character-info p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #cfcfcf;
+}
+
+@media (max-width: 650px) {
+    .character-info {
+        margin-top: 14px;
+        padding: 10px 12px;
+    }
+
+    .character-info-header h3 {
+        font-size: 17px;
+    }
+
+    .character-info p {
+        font-size: 12.5px;
+        line-height: 1.5;
     }
 }
