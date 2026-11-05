@@ -70,55 +70,178 @@ body {
 .selection-list {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 22px;
     flex-wrap: wrap;
 }
 
 .selection-card {
-    width: 190px;
-    height: 180px;
-    overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 180px;
+    padding: 0;
+    overflow: hidden;
     cursor: pointer;
     background: #141b15;
-    border: 2px solid #394239;
-    border-radius: 9px;
+    border: 3px solid #394239;
+    border-radius: 10px;
     color: white;
-    transition: 0.2s;
+    font-family: inherit;
+    text-align: center;
+    filter: grayscale(0.55) brightness(0.72);
+    transition: transform 0.25s ease, filter 0.25s ease,
+                border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .selection-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-6px);
+    filter: grayscale(0.1) brightness(0.95);
     border-color: #a5a5a5;
 }
 
 .selection-card.selected {
-    border: 3px solid #a52a2a;
-    box-shadow: 0 0 18px rgba(165, 42, 42, 0.65);
+    transform: translateY(-4px) scale(1.05);
+    filter: none;
+    border-color: #a52a2a;
+    box-shadow: 0 0 22px rgba(165, 42, 42, 0.7);
 }
 
-.selection-card img {
-    width: 100%;
-    height: 140px;
-    object-fit: contain;
-    padding: 8px;
-    display: block;
-}
-
-.selection-card span {
-    display: block;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.65);
+/* "SEÇİLDİ" rozeti */
+.selection-card.selected::before {
+    content: "✔ SEÇİLDİ";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    padding: 3px 8px;
+    background: #a52a2a;
+    color: white;
+    font-size: 11px;
     font-weight: bold;
     letter-spacing: 1px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.weapon-list .selection-card {
-    height: 155px;
+/* Üzerine gelince geçen ışık şeridi */
+.selection-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 50%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(
+        120deg,
+        transparent,
+        rgba(255, 255, 255, 0.22),
+        transparent
+    );
+    transform: skewX(-20deg);
 }
 
-.weapon-list .selection-card img {
+.selection-card:hover::after {
+    left: 130%;
+    transition: left 0.6s ease;
+}
+
+/* Fotoğraf alanı: kartı tamamen doldurur */
+.card-image {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background: #0c110d;
+}
+
+.card-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    transition: transform 0.4s ease;
+}
+
+.selection-card:hover .card-image img {
+    transform: scale(1.08);
+}
+
+/* Alttan karartma geçişi */
+.card-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0) 55%);
+}
+
+.card-name {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 10px;
+    z-index: 2;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 6px #000;
+}
+
+/* Silah kartları: daha geniş, altında özellik çubukları */
+.weapon-card {
+    width: 230px;
+}
+
+.weapon-card .card-image {
     height: 115px;
+}
+
+.weapon-card .card-image img {
+    object-position: center;
+}
+
+.weapon-stats {
+    display: block;
+    padding: 10px 12px 12px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.stat-row:first-child {
+    margin-top: 0;
+}
+
+.stat-label {
+    width: 48px;
+    text-align: left;
+    font-size: 11px;
+    color: #bbb;
+    letter-spacing: 0.5px;
+}
+
+.stat-bar {
+    flex: 1;
+    height: 6px;
+    overflow: hidden;
+    background: #2a312b;
+    border-radius: 3px;
+}
+
+.stat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b2424, #e0a030);
+    border-radius: 3px;
 }
 
 /* OYUNA BAŞLA */
@@ -442,25 +565,52 @@ body {
     }
 
     .selection-card {
-        width: min(28vw, 130px);
+        width: min(29vw, 125px);
+        border-width: 2px;
+    }
+
+    .card-image {
         height: 135px;
     }
 
-    .selection-card img {
-        height: 100px;
-    }
-
-    .selection-card span {
+    .card-name {
+        bottom: 6px;
         font-size: 12px;
-        padding: 7px 3px;
+        letter-spacing: 1px;
     }
 
-    .weapon-list .selection-card {
-        height: 120px;
+    .selection-card.selected::before {
+        top: 5px;
+        right: 5px;
+        padding: 2px 5px;
+        font-size: 8px;
     }
 
-    .weapon-list .selection-card img {
-        height: 85px;
+    .weapon-card {
+        width: min(30vw, 130px);
+    }
+
+    .weapon-card .card-image {
+        height: 75px;
+    }
+
+    .weapon-stats {
+        padding: 6px 6px 8px;
+    }
+
+    .stat-row {
+        gap: 4px;
+        margin-top: 4px;
+    }
+
+    .stat-label {
+        width: 34px;
+        font-size: 9px;
+        letter-spacing: 0;
+    }
+
+    .stat-bar {
+        height: 4px;
     }
 
     .start-button {

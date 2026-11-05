@@ -366,37 +366,98 @@ function updateCharacterInfo(characterKey) {
     characterInfoBox.style.animation = "";
 }
 
+// SON SEÇİMİ HATIRLAMA (tarayıcıda saklanır)
+function saveChoice(name, value) {
+    try {
+        localStorage.setItem("zombieSurvival_" + name, value);
+    } catch (error) {
+        // Saklama kapalıysa (gizli sekme gibi) sorun değil, oyun yine çalışır
+    }
+}
+
+function loadChoice(name) {
+    try {
+        return localStorage.getItem("zombieSurvival_" + name);
+    } catch (error) {
+        return null;
+    }
+}
+
 // KARAKTER SEÇİMİ
+function selectCharacter(key, save = true) {
+    if (!characterProfiles[key]) return;
+
+    document.querySelectorAll("[data-character]").forEach((item) => {
+        item.classList.toggle("selected", item.dataset.character === key);
+    });
+
+    selectedCharacter = key;
+    playerImage = characterImages[key];
+
+    updateCharacterInfo(key);
+
+    if (save) saveChoice("character", key);
+}
+
 document.querySelectorAll("[data-character]").forEach((card) => {
     card.addEventListener("click", () => {
-        document.querySelectorAll("[data-character]").forEach((item) => {
-            item.classList.remove("selected");
-        });
-
-        card.classList.add("selected");
-
-        selectedCharacter = card.dataset.character;
-        playerImage = characterImages[selectedCharacter];
-
-        updateCharacterInfo(selectedCharacter);
+        selectCharacter(card.dataset.character);
     });
 });
-
-// Menü açılınca varsayılan karakterin bilgisini göster
-updateCharacterInfo(selectedCharacter);
 
 // SİLAH SEÇİMİ
+function selectWeapon(key, save = true) {
+    if (!weapons[key]) return;
+
+    document.querySelectorAll("[data-weapon]").forEach((item) => {
+        item.classList.toggle("selected", item.dataset.weapon === key);
+    });
+
+    selectedWeapon = key;
+
+    if (save) saveChoice("weapon", key);
+}
+
 document.querySelectorAll("[data-weapon]").forEach((card) => {
     card.addEventListener("click", () => {
-        document.querySelectorAll("[data-weapon]").forEach((item) => {
-            item.classList.remove("selected");
-        });
-
-        card.classList.add("selected");
-
-        selectedWeapon = card.dataset.weapon;
+        selectWeapon(card.dataset.weapon);
     });
 });
+
+// SİLAH ÖZELLİK ÇUBUKLARI (değerler weapons verisinden hesaplanır,
+// silah dengesini değiştirirsen çubuklar kendiliğinden güncellenir)
+function renderWeaponStats() {
+    document.querySelectorAll("[data-stats]").forEach((box) => {
+        const weapon = weapons[box.dataset.stats];
+
+        if (!weapon) return;
+
+        // Pompalı bir atışta 3 saçma çıkarır (shootBullet içindeki spreadAngles)
+        const pelletsPerShot = weapon.type === "spread" ? 3 : 1;
+
+        const stats = [
+            ["Hasar", pelletsPerShot / 3],
+            ["Hız", 60 / weapon.cooldown / 10],
+            ["Şarjör", weapon.magSize / 30],
+            ["Dolum", 60 / weapon.reloadTime]
+        ];
+
+        box.innerHTML = stats.map(([label, ratio]) => {
+            const percent = Math.max(6, Math.min(100, Math.round(ratio * 100)));
+
+            return `<span class="stat-row">
+                <span class="stat-label">${label}</span>
+                <span class="stat-bar"><span class="stat-fill" style="width:${percent}%"></span></span>
+            </span>`;
+        }).join("");
+    });
+}
+
+renderWeaponStats();
+
+// Menü açılınca son seçilenleri geri yükle (yoksa varsayılanlar kalır)
+selectCharacter(loadChoice("character") || selectedCharacter, false);
+selectWeapon(loadChoice("weapon") || selectedWeapon, false);
 
 // MOBİL JOYSTICK
 function updateJoystick(e) {
