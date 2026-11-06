@@ -19,6 +19,7 @@
         <div class="menu-content">
             <h1>THE LAST <span>OF US III</span></h1>
             <p class="menu-subtitle">HAYATTA KALMAK İÇİN SAVAŞ</p>
+            <p class="menu-best hidden" id="menuBest"></p>
 
             <!-- KARAKTER SEÇİMİ -->
             <h2>Karakterini Seç</h2>
@@ -52,6 +53,8 @@
                     <span id="characterInfoRole"></span>
                 </div>
                 <p id="characterInfoStory"></p>
+                <div class="character-stats" id="characterInfoStats"></div>
+                <p class="character-ability" id="characterInfoAbility"></p>
             </div>
 
             <!-- SİLAH SEÇİMİ -->
@@ -79,6 +82,26 @@
                         <span class="card-name">Taramalı</span>
                     </span>
                     <span class="weapon-stats" data-stats="rifle"></span>
+                </button>
+            </div>
+
+            <!-- HARİTA SEÇİMİ -->
+            <h2>Haritayı Seç</h2>
+            <div class="selection-list map-list" id="mapSelection">
+                <button class="selection-card map-card selected" data-map="forest">
+                    <span class="card-image">
+                        <canvas class="map-preview" data-preview="forest" width="320" height="171"></canvas>
+                        <span class="card-name">Orman</span>
+                    </span>
+                    <span class="map-desc">Karanlık ve sık ağaçlı, terk edilmiş bir orman</span>
+                </button>
+
+                <button class="selection-card map-card" data-map="winter">
+                    <span class="card-image">
+                        <canvas class="map-preview" data-preview="winter" width="320" height="171"></canvas>
+                        <span class="card-name">Kış</span>
+                    </span>
+                    <span class="map-desc">Karlı çam ormanı, tipi yağıyor</span>
                 </button>
             </div>
 
@@ -198,6 +221,8 @@
             <span>❤️ Can: <strong id="health">100</strong></span>
             <span>🔫 Mermi: <strong id="ammo">12 / 36</strong></span>
             <span>🧟 Wave: <strong id="wave">1</strong></span>
+            <span id="throwBombInfo" title="Bomba (1)">💣 <strong id="grenades">2</strong></span>
+            <span id="throwMolotovInfo" title="Molotof (2)">🔥 <strong id="molotovs">2</strong></span>
             <span>⭐ Puan: <strong id="score">0</strong></span>
         </div>
 
@@ -213,6 +238,9 @@
                 </div>
             </div>
 
+            <button id="swapThrowButton" class="swap-throw-button">⇄</button>
+            <button id="throwButton" class="throw-button">💣</button>
+
             <button id="reloadButton" class="reload-button">R</button>
 
             <button id="fireButton" class="fire-button">
@@ -223,8 +251,15 @@
 
         <!-- OYUN KONTROLLERİ -->
         <div class="game-controls">
+            <button id="fullscreenButton" title="Tam ekran (F)">⛶</button>
             <button id="musicButton">🔊</button>
             <button id="pauseButton">⏸ Oyunu Duraklat</button>
+        </div>
+
+        <!-- BAŞLAMADAN ÖNCE GERİ SAYIM -->
+        <div id="countdownScreen" class="countdown-screen hidden">
+            <div class="countdown-label">HAZIR OL</div>
+            <div id="countdownNumber" class="countdown-number">3</div>
         </div>
 
         <!-- DURAKLATMA EKRANI -->
@@ -238,6 +273,14 @@
         <div id="gameOverScreen" class="game-over hidden">
             <h1>GAME OVER</h1>
             <p>Skorun: <span id="finalScore">0</span></p>
+            <p id="newRecord" class="new-record hidden">🏆 YENİ REKOR!</p>
+            <div class="final-stats">
+                <span>🧟 Öldürülen: <strong id="finalKills">0</strong></span>
+                <span>🌊 Dalga: <strong id="finalWave">1</strong></span>
+                <span>⏱ Süre: <strong id="finalTime">0:00</strong></span>
+            </div>
+            <h3>EN İYİ SKORLAR</h3>
+            <ol id="highScoreList"></ol>
             <button id="restartButton">Yeniden Başla</button>
             <button id="menuButton">Ana Menü</button>
         </div>

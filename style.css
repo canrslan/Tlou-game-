@@ -239,6 +239,7 @@ body {
 }
 
 .stat-fill {
+    display: block;
     height: 100%;
     background: linear-gradient(90deg, #8b2424, #e0a030);
     border-radius: 3px;
@@ -418,7 +419,8 @@ body {
 }
 
 #pauseButton,
-#musicButton {
+#musicButton,
+#fullscreenButton {
     padding: 12px 20px;
     color: white;
     border-radius: 8px;
@@ -437,12 +439,14 @@ body {
     background: #d32f2f;
 }
 
-#musicButton {
+#musicButton,
+#fullscreenButton {
     background: #354b35;
     border: 1px solid #718b65;
 }
 
-#musicButton:hover {
+#musicButton:hover,
+#fullscreenButton:hover {
     background: #526d4d;
 }
 
@@ -693,7 +697,8 @@ body {
     }
 
     #pauseButton,
-    #musicButton {
+    #musicButton,
+    #fullscreenButton {
         padding: 9px 12px;
         font-size: 12px;
     }
@@ -838,7 +843,8 @@ body {
     }
 
     #pauseButton,
-    #musicButton {
+    #musicButton,
+    #fullscreenButton {
         padding: 7px 10px;
         font-size: 11px;
     }
@@ -855,39 +861,90 @@ body {
     }
 }
 
-/* TELEFON YATAY KONUMDAYKEN */
-@media (pointer: coarse) and (orientation: landscape) {
+/* TAM EKRAN VE TELEFON: oyun ekrana tam sığar (15:8 oranı korunur) */
+html.immersive body:has(.game-container:not(.hidden)) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+}
 
-    .game-container {
-        height: 100dvh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
+html.immersive .game-container {
+    width: min(100vw, calc(100dvh * 1.875));
+    max-width: none;
+    margin: 0;
+}
 
-    #gameCanvas {
-        width: 100%;
-        max-height: calc(100dvh - 35px);
-        object-fit: contain;
-    }
+/* Üst bilgi çubuğu oyunun üstüne biner, böylece ekranda yer kaplamaz */
+html.immersive .game-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    padding: 6px 16px;
+    font-size: 15px;
+    background: rgba(15, 20, 15, 0.7);
+    border: none;
+}
 
-    .game-info {
-        flex-shrink: 0;
+html.immersive #gameCanvas {
+    border: none;
+}
+
+@media (pointer: coarse) {
+    html.immersive .game-info {
+        padding: 4px 10px;
+        font-size: 12px;
     }
 }
 
-/* TELEFON DİKEY KONUMDAYKEN */
+/* TELEFON DİKEY KONUMDAYKEN (uyarıyı JS gösterir) */
 @media (pointer: coarse) and (orientation: portrait) {
-
-    body:has(.game-container:not(.hidden)) .orientation-warning {
-        display: flex !important;
-    }
 
     body:has(.game-container:not(.hidden)) {
         overflow: hidden;
     }
 }
 
+/* GERİ SAYIM */
+.countdown-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.countdown-label {
+    color: #c7d9a4;
+    font-size: clamp(16px, 4vh, 30px);
+    font-weight: bold;
+    letter-spacing: 6px;
+}
+
+.countdown-number {
+    color: #e8e8e8;
+    font-size: clamp(80px, 26vh, 230px);
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 0 0 35px rgba(165, 42, 42, 0.9);
+    animation: countdownPop 1s ease-out;
+}
+
+@keyframes countdownPop {
+    0%   { transform: scale(1.7); opacity: 0; }
+    25%  { transform: scale(1);   opacity: 1; }
+    100% { transform: scale(0.85); opacity: 0.6; }
+}
 
 /* YENİDEN DOLDURMA BUTONU (MOBİL) */
 .reload-button {
@@ -971,5 +1028,194 @@ body {
     .character-info p {
         font-size: 12.5px;
         line-height: 1.5;
+    }
+}
+
+
+/* EN YÜKSEK SKOR (MENÜ) */
+.menu-best {
+    margin: -16px 0 18px;
+    color: #c7d9a4;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+/* KARAKTER ÖZELLİK ÇUBUKLARI VE ÖZEL YETENEK */
+.character-stats {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 22px;
+}
+
+.character-stats .stat-row {
+    margin-top: 0;
+}
+
+.character-stats .stat-label {
+    width: 62px;
+}
+
+.character-ability {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #394239;
+    color: #ffd54f !important;
+    font-size: 13px !important;
+}
+
+/* HARİTA SEÇİM KARTLARI */
+.map-card {
+    width: 260px;
+}
+
+.map-card .card-image {
+    height: 135px;
+}
+
+.map-card .card-image canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.4s ease;
+}
+
+.selection-card:hover .card-image canvas {
+    transform: scale(1.08);
+}
+
+.map-desc {
+    display: block;
+    padding: 9px 10px 11px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #bbb;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* HUD: seçili fırlatılabilir silah */
+#throwBombInfo,
+#throwMolotovInfo {
+    padding-bottom: 1px;
+    border-bottom: 2px solid transparent;
+    opacity: 0.6;
+}
+
+#throwBombInfo.throw-selected,
+#throwMolotovInfo.throw-selected {
+    border-bottom-color: #ffd54f;
+    color: #ffd54f;
+    opacity: 1;
+}
+
+/* MOBİL BOMBA BUTONLARI */
+.throw-button {
+    position: absolute;
+    right: 30px;
+    bottom: 145px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid #ff9a55;
+    background: rgba(120, 60, 20, 0.85);
+    color: white;
+    font-size: 26px;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+}
+
+.throw-button:active {
+    background: #c9742a;
+    transform: scale(0.95);
+}
+
+.swap-throw-button {
+    position: absolute;
+    right: 105px;
+    bottom: 153px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid #c9b08a;
+    background: rgba(70, 60, 40, 0.85);
+    color: white;
+    font-size: 20px;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+}
+
+.swap-throw-button:active {
+    background: #8a7650;
+}
+
+/* OYUN SONU: İSTATİSTİK VE SKOR TABLOSU */
+.game-over {
+    max-height: 92dvh;
+    overflow-y: auto;
+}
+
+.new-record {
+    color: #ffd54f;
+    font-size: 22px !important;
+    font-weight: bold;
+    letter-spacing: 2px;
+    animation: recordPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes recordPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+}
+
+.final-stats {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-bottom: 14px;
+    color: #ccc;
+    font-size: 14px;
+}
+
+.game-over h3 {
+    margin: 8px 0 6px;
+    color: #c7d9a4;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+#highScoreList {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding-left: 26px;
+    text-align: left;
+    color: #ccc;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+#highScoreList li.current-score {
+    color: #ffd54f;
+    font-weight: bold;
+}
+
+@media (max-width: 650px) {
+    .map-card {
+        width: min(44vw, 170px);
+    }
+
+    .map-card .card-image {
+        height: 85px;
+    }
+
+    .map-desc {
+        padding: 6px;
+        font-size: 10px;
+    }
+
+    .character-stats {
+        grid-template-columns: 1fr;
     }
 }

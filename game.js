@@ -35,6 +35,23 @@ const joystickStick = document.getElementById("joystickStick");
 const fireButton = document.getElementById("fireButton");
 const reloadButton = document.getElementById("reloadButton");
 const orientationWarning = document.getElementById("orientationWarning");
+const fullscreenButton = document.getElementById("fullscreenButton");
+const countdownScreen = document.getElementById("countdownScreen");
+const countdownNumber = document.getElementById("countdownNumber");
+
+const grenadeText = document.getElementById("grenades");
+const molotovText = document.getElementById("molotovs");
+const throwBombInfo = document.getElementById("throwBombInfo");
+const throwMolotovInfo = document.getElementById("throwMolotovInfo");
+const throwButton = document.getElementById("throwButton");
+const swapThrowButton = document.getElementById("swapThrowButton");
+
+const finalKills = document.getElementById("finalKills");
+const finalWave = document.getElementById("finalWave");
+const finalTime = document.getElementById("finalTime");
+const newRecordText = document.getElementById("newRecord");
+const highScoreList = document.getElementById("highScoreList");
+const menuBest = document.getElementById("menuBest");
 
 // Mobil kontrol değişkenleri
 let joystickActive = false;
@@ -120,6 +137,56 @@ let noAmmoMessageTimer = 0;
 let explosions = [];
 let particles = [];
 let bombs = [];
+
+// BOMBA VE MOLOTOF AYARLARI
+const throwables = {
+    maxRange: 380,        // fareyle en fazla bu kadar uzağa atılabilir (piksel)
+    cooldown: 40,         // iki atış arası bekleme (kare)
+    maxCarry: 6,          // en fazla taşınabilir adet
+    friendlyFire: true,   // kendi bombandan da zarar görürsün
+
+    grenade: {
+        radius: 135,      // patlama yarıçapı
+        damage: 6,        // merkezdeki zombi hasarı (kenara doğru yarıya düşer)
+        playerDamage: 18  // kendine yakın patlarsa
+    },
+
+    molotov: {
+        radius: 100,      // yangın alanı
+        duration: 360,    // yanma süresi (kare, 360 = 6 saniye)
+        tickEvery: 20,    // kaç karede bir hasar verir
+        tickDamage: 1,    // zombiye her vuruşta hasar
+        playerTick: 3     // yangının içinde durursan hasar
+    }
+};
+
+let grenadeCount = 2;
+let molotovCount = 2;
+let selectedThrowable = "grenade";
+let throwCooldown = 0;
+let thrown = [];          // havadaki bomba ve molotoflar
+let fires = [];           // yerdeki yangınlar
+
+// Karaktere göre değişen özellikler (resetGame içinde ayarlanır)
+let reloadMultiplier = 1;
+let reloadTotal = 1;
+let healMultiplier = 1;
+let grenadePower = 1;
+let fireDurationMultiplier = 1;
+
+// Efektler: ekran sarsıntısı, kan lekesi, namlu ışığı
+let shakeTimer = 0;
+let shakeMax = 1;
+let shakeStrength = 0;
+let hurtFlash = 0;
+let muzzleFlash = 0;
+let muzzleAngle = 0;
+let stainCanvas = null;
+let stainCtx = null;
+let snowflakes = [];
+
+// İstatistik
+let kills = 0;
 
 // Harita: engeller (ağaç, kaya) ve önceden çizilmiş zemin
 let obstacles = [];
@@ -212,6 +279,7 @@ const player = {
     height: 40,
     speed: 3.5,
     health: 100,
+    maxHealth: 100,
     damageCooldown: 0
 };
 
@@ -332,19 +400,67 @@ const characterProfiles = {
     player: {
         name: "Can",
         role: "Hayatta Kalan",
+        ability: "Dengeli savaşçı: can paketleri %25 daha fazla iyileştirir.",
         story: "Salgın başladığında şehri geride bırakıp ayakta kalmayı tek başına öğrenen, sakin ve soğukkanlı bir hayatta kalan. Yıllarca kimseye güvenmeden yaşamak ona dikkatli olmayı öğretti. Şimdi geriye kalan son güvenli bölgeyi korumak için silahını eline aldı."
     },
     ellie: {
         name: "Ellie",
         role: "Genç Savaşçı",
+        ability: "Hızlı ve usta: şarjörü %25 daha çabuk doldurur, molotofları %50 daha uzun yanar.",
         story: "Salgından sonra doğan Ellie, çocukluğunu yıkık bir dünyanın askeri okulunda geçirdi. Enfeksiyona karşı bağışık çıkınca hayatı bir anda herkesin umudu haline geldi. Keskin zekâsı, alaycı mizahı ve inadıyla en tehlikeli yerlerde bile pes etmiyor."
     },
     joel: {
         name: "Joel",
         role: "Kaçakçı",
+        ability: "Ağır ve dayanıklı: 130 canla başlar, bombaları daha geniş alanda ve daha güçlü patlar.",
         story: "Salgının ilk gecesinde en büyük kaybını yaşayan Joel, yıllar sonra karantina bölgelerinde kaçakçılık yapan sert ve kayıtsız bir adama dönüştü. Ağır bir yolculuğu üstlenmek zorunda kalınca, yaşadıklarının yükünü bir kez daha taşımayı öğrenmesi gerekti."
     }
 };
+
+// KARAKTER ÖZELLİKLERİ (oyunu gerçekten etkiler)
+const characterStats = {
+    player: {
+        speed: 3.5, maxHealth: 100, reloadMultiplier: 1.0,
+        grenades: 2, molotovs: 2,
+        healMultiplier: 1.25, grenadePower: 1.0, fireDuration: 1.0
+    },
+    ellie: {
+        speed: 4.1, maxHealth: 80, reloadMultiplier: 0.75,
+        grenades: 1, molotovs: 3,
+        healMultiplier: 1.0, grenadePower: 1.0, fireDuration: 1.5
+    },
+    joel: {
+        speed: 3.0, maxHealth: 130, reloadMultiplier: 1.1,
+        grenades: 3, molotovs: 1,
+        healMultiplier: 1.0, grenadePower: 1.3, fireDuration: 1.0
+    }
+};
+
+const characterInfoStats = document.getElementById("characterInfoStats");
+const characterInfoAbility = document.getElementById("characterInfoAbility");
+
+function renderCharacterStats(characterKey) {
+    const stats = characterStats[characterKey];
+
+    if (!stats) return;
+
+    const rows = [
+        ["Can", stats.maxHealth / 130],
+        ["Hız", stats.speed / 4.1],
+        ["Doldurma", 1 / stats.reloadMultiplier / 1.34],
+        ["Bomba", stats.grenades / 3],
+        ["Molotof", stats.molotovs / 3]
+    ];
+
+    characterInfoStats.innerHTML = rows.map(([label, ratio]) => {
+        const percent = Math.max(6, Math.min(100, Math.round(ratio * 100)));
+
+        return `<span class="stat-row">
+            <span class="stat-label">${label}</span>
+            <span class="stat-bar"><span class="stat-fill" style="width:${percent}%"></span></span>
+        </span>`;
+    }).join("");
+}
 
 const characterInfoName = document.getElementById("characterInfoName");
 const characterInfoRole = document.getElementById("characterInfoRole");
@@ -359,6 +475,8 @@ function updateCharacterInfo(characterKey) {
     characterInfoName.textContent = profile.name;
     characterInfoRole.textContent = profile.role;
     characterInfoStory.textContent = profile.story;
+    characterInfoAbility.textContent = "⭐ Özel: " + profile.ability;
+    renderCharacterStats(characterKey);
 
     // Kutudaki geçiş animasyonunu her seçimde yeniden başlat
     characterInfoBox.style.animation = "none";
@@ -557,6 +675,17 @@ if (reloadButton) {
     });
 }
 
+// MOBİL BOMBA BUTONLARI
+throwButton.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    throwSelected();
+});
+
+swapThrowButton.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    switchThrowable();
+});
+
 // DOKUNMATİK NİŞAN ALMA
 function updateTouchAim(e) {
     const rect = canvas.getBoundingClientRect();
@@ -602,31 +731,188 @@ function updateMobileAim() {
     mouse.y = centerY + Math.sin(mobileAimAngle) * mobileAimDistance;
 }
 
+// TAM EKRAN
+function isFullscreen() {
+    return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function canFullscreen() {
+    const element = document.documentElement;
+    return Boolean(element.requestFullscreen || element.webkitRequestFullscreen);
+}
+
+// Tam ekranda ve telefonda oyun ekrana tam sığacak şekilde büyür (CSS: html.immersive)
+function updateImmersiveMode() {
+    document.documentElement.classList.toggle(
+        "immersive",
+        isFullscreen() || isMobileDevice
+    );
+
+    fullscreenButton.textContent = isFullscreen() ? "🗗" : "⛶";
+}
+
+// Telefonu otomatik yatay çevirir (Android Chrome'da tam ekranda çalışır)
+function lockLandscape() {
+    if (!isMobileDevice || !screen.orientation || !screen.orientation.lock) return;
+
+    screen.orientation.lock("landscape").catch(() => {
+        console.log("Yatay ekran kilidi desteklenmiyor.");
+    });
+}
+
+async function enterFullscreen() {
+    const element = document.documentElement;
+
+    try {
+        if (element.requestFullscreen) {
+            await element.requestFullscreen({ navigationUI: "hide" });
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        }
+    } catch (error) {
+        console.log("Tam ekran açılamadı:", error);
+    }
+
+    // Yatay kilit ancak tam ekran açıldıktan sonra kabul edilir
+    lockLandscape();
+}
+
+function exitFullscreen() {
+    try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            Promise.resolve(document.exitFullscreen()).catch(() => {});
+        } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+    } catch (error) {
+        console.log("Tam ekrandan çıkılamadı:", error);
+    }
+}
+
+function toggleFullscreen() {
+    if (isFullscreen()) {
+        exitFullscreen();
+    } else {
+        enterFullscreen();
+    }
+}
+
+fullscreenButton.addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", onFullscreenChange);
+document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+function onFullscreenChange() {
+    updateImmersiveMode();
+    updateOrientationWarning();
+}
+
+// iPhone gibi tam ekranı desteklemeyen cihazlarda buton gizlenir
+if (!canFullscreen()) {
+    fullscreenButton.style.display = "none";
+}
+
+updateImmersiveMode();
+
+// BAŞLAMADAN ÖNCE 3 SANİYELİK GERİ SAYIM
+let countdownTimer = null;
+
+function playBeep(frequency, duration) {
+    if (!soundEnabled || !audioCtx) return;
+
+    const now = audioCtx.currentTime;
+
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, now);
+
+    const volume = audioCtx.createGain();
+    volume.gain.setValueAtTime(0.3, now);
+    volume.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    oscillator.connect(volume);
+    volume.connect(masterGain);
+
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+}
+
+function cancelCountdown() {
+    if (countdownTimer !== null) {
+        clearTimeout(countdownTimer);
+        countdownTimer = null;
+    }
+
+    countdownScreen.classList.add("hidden");
+}
+
+function startCountdown(onDone) {
+    cancelCountdown();
+
+    let count = 3;
+
+    function showNumber() {
+        countdownNumber.textContent = count;
+
+        // Sayı animasyonunu her sayıda yeniden başlat
+        countdownNumber.style.animation = "none";
+        void countdownNumber.offsetWidth;
+        countdownNumber.style.animation = "";
+
+        playBeep(440, 0.15);
+    }
+
+    countdownScreen.classList.remove("hidden");
+    showNumber();
+
+    function tick() {
+        count--;
+
+        if (count > 0) {
+            showNumber();
+            countdownTimer = setTimeout(tick, 1000);
+        } else {
+            countdownTimer = null;
+            countdownScreen.classList.add("hidden");
+            playBeep(880, 0.3);
+            onDone();
+        }
+    }
+
+    countdownTimer = setTimeout(tick, 1000);
+}
+
 // OYUNU BAŞLAT
 function startGame() {
     stopAnimation();
+    cancelCountdown();
 
     mainMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     gameOverScreen.classList.add("hidden");
     pauseScreen.classList.add("hidden");
+    orientationWarning.classList.add("hidden");
 
     resetGame();
 
-    gameStarted = true;
+    // Geri sayım bitene kadar oyun başlamaz
+    gameStarted = false;
     isPaused = false;
 
     initAudio();
-    updateOrientationWarning();
 
-    if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock("landscape").catch(() => {
-            console.log("Yatay ekran kilidi desteklenmiyor.");
-        });
-    }
+    // Tam ekran isteği, butona basılan anda yapılmalı (tarayıcı kuralı)
+    enterFullscreen();
 
-    resetTiming();
-    gameLoop();
+    // Geri sayım sırasında arkada sahne görünsün
+    render();
+
+    startCountdown(() => {
+        gameStarted = true;
+
+        updateOrientationWarning();
+        resetTiming();
+        gameLoop();
+    });
 }
 
 startButton.addEventListener("click", startGame);
@@ -638,6 +924,17 @@ window.addEventListener("keydown", (e) => {
 
     if (key === "r" && !e.repeat) {
         startReload();
+    }
+
+    if (key === "f" && !e.repeat && gameStarted) {
+        toggleFullscreen();
+    }
+
+    if (!e.repeat) {
+        if (key === "g") throwSelected();
+        if (key === "q") switchThrowable();
+        if (key === "1") selectThrowable("grenade");
+        if (key === "2") selectThrowable("molotov");
     }
 });
 
@@ -656,7 +953,17 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 // BİLGİSAYARDA ATEŞ ETME
+// Sağ tık: seçili bombayı fareyle gösterilen yere at
+canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+});
+
 canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 2) {
+        throwSelected();
+        return;
+    }
+
     if (e.button !== 0 || !gameStarted || gameOver || isPaused) return;
 
     mouseDown = true;
@@ -691,7 +998,8 @@ function startReload() {
     if (reloading || ammo >= weapon.magSize || reserveAmmo <= 0) return;
 
     reloading = true;
-    reloadTimer = weapon.reloadTime;
+    reloadTotal = Math.round(weapon.reloadTime * reloadMultiplier);
+    reloadTimer = reloadTotal;
     updateAmmoText();
 }
 
@@ -728,6 +1036,10 @@ function tryShoot() {
     shootBullet();
     playShotSound(selectedWeapon);
 
+    if (selectedWeapon === "shotgun") {
+        addShake(3.5, 7);
+    }
+
     ammo--;
     fireCooldown = weapons[selectedWeapon].cooldown;
     updateAmmoText();
@@ -749,6 +1061,9 @@ function shootBullet() {
     );
 
     const weapon = weapons[selectedWeapon];
+
+    muzzleFlash = 3;
+    muzzleAngle = angle;
 
     if (weapon.type === "spread") {
         const spreadAngles = [-0.18, 0, 0.18];
@@ -891,7 +1206,7 @@ function drawPlayer() {
 function drawReloadBar() {
     if (!reloading) return;
 
-    const total = weapons[selectedWeapon].reloadTime;
+    const total = reloadTotal;
     const progress = 1 - reloadTimer / total;
 
     const barWidth = 60;
@@ -910,6 +1225,9 @@ function drawReloadBar() {
 function damagePlayer(amount) {
     if (gameOver) return;
 
+    addShake(5, 12);
+    hurtFlash = 12;
+
     player.health -= amount;
 
     if (player.health <= 0) {
@@ -921,17 +1239,28 @@ function damagePlayer(amount) {
     }
 }
 
-// PATLAMA GÖRÜNTÜSÜ (büyük zombi ve bomba ortak kullanır)
-function spawnExplosionEffect(x, y, radius, particleCount) {
+// PATLAMA GÖRÜNTÜSÜ (büyük zombi, boss bombası, bomba ve molotof ortak kullanır)
+const explosionThemes = {
+    acid: {
+        core: [200, 255, 100], mid: [60, 200, 40], edge: [20, 120, 20],
+        ring: [150, 255, 80], particle: [130, 255, 60], glow: "#7cff3c"
+    },
+    fire: {
+        core: [255, 240, 160], mid: [255, 140, 30], edge: [160, 40, 10],
+        ring: [255, 190, 80], particle: [255, 160, 50], glow: "#ff9a2e"
+    }
+};
+
+function spawnExplosionEffect(x, y, radius, particleCount, theme = "acid") {
     explosions.push({
         x: x,
         y: y,
         radius: radius,
+        theme: theme,
         life: 40,
         maxLife: 40
     });
 
-    // Yeşil parçacıklar
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 2 + Math.random() * 5;
@@ -944,7 +1273,8 @@ function spawnExplosionEffect(x, y, radius, particleCount) {
             vy: Math.sin(angle) * speed,
             life: life,
             maxLife: life,
-            size: 3 + Math.random() * 5
+            size: 3 + Math.random() * 5,
+            theme: theme
         });
     }
 }
@@ -981,6 +1311,8 @@ function createBossExplosion(x, y) {
     const config = difficulty.bossExplosion;
 
     spawnExplosionEffect(x, y, config.radius, 35);
+    addShake(12, 25);
+    addScorch(x, y, config.radius * 0.5);
     applyBlastDamage(x, y, config.radius, config.damage);
 }
 
@@ -1031,6 +1363,12 @@ function drawBombs() {
         ctx.beginPath();
         ctx.arc(bomb.targetX, bomb.targetY, config.radius * p, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(bomb.targetX, bomb.targetY, config.radius, 0, Math.PI * 2);
+        ctx.stroke();
 
         ctx.strokeStyle = "rgba(160, 255, 90, 0.8)";
         ctx.lineWidth = 3;
@@ -1089,6 +1427,8 @@ function updateExplosions() {
 
 function drawExplosions() {
     for (const explosion of explosions) {
+        const colors = explosionThemes[explosion.theme || "acid"];
+
         const t = 1 - explosion.life / explosion.maxLife; // 0'dan 1'e
         const eased = 1 - Math.pow(1 - t, 3);              // hızlı başlar, yavaşlar
         const radius = explosion.radius * eased;
@@ -1096,15 +1436,15 @@ function drawExplosions() {
 
         ctx.save();
 
-        // Yeşil patlama bulutu
+        // Patlama bulutu
         const gradient = ctx.createRadialGradient(
             explosion.x, explosion.y, 0,
             explosion.x, explosion.y, Math.max(radius, 1)
         );
 
-        gradient.addColorStop(0, `rgba(200, 255, 100, ${0.9 * alpha})`);
-        gradient.addColorStop(0.6, `rgba(60, 200, 40, ${0.55 * alpha})`);
-        gradient.addColorStop(1, "rgba(20, 120, 20, 0)");
+        gradient.addColorStop(0, `rgba(${colors.core.join(",")}, ${0.9 * alpha})`);
+        gradient.addColorStop(0.6, `rgba(${colors.mid.join(",")}, ${0.55 * alpha})`);
+        gradient.addColorStop(1, `rgba(${colors.edge.join(",")}, 0)`);
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -1112,7 +1452,7 @@ function drawExplosions() {
         ctx.fill();
 
         // Şok dalgası halkası
-        ctx.strokeStyle = `rgba(150, 255, 80, ${alpha})`;
+        ctx.strokeStyle = `rgba(${colors.ring.join(",")}, ${alpha})`;
         ctx.lineWidth = 2 + 6 * (1 - t);
         ctx.beginPath();
         ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2);
@@ -1122,12 +1462,13 @@ function drawExplosions() {
     }
 
     for (const particle of particles) {
+        const colors = explosionThemes[particle.theme || "acid"];
         const alpha = particle.life / particle.maxLife;
 
         ctx.save();
-        ctx.shadowColor = "#7cff3c";
+        ctx.shadowColor = colors.glow;
         ctx.shadowBlur = 10;
-        ctx.fillStyle = `rgba(130, 255, 60, ${alpha})`;
+        ctx.fillStyle = `rgba(${colors.particle.join(",")}, ${alpha})`;
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
         ctx.fill();
@@ -1168,17 +1509,22 @@ function spawnPickup(type, x, y) {
     });
 }
 
-// Zombi ölünce eşya düşürme şansı
+// Zombi ölünce eşya düşürme şansı (liste sırayla toplanır, sonuncudan sonrası: eşya yok)
 function dropLoot(zombie) {
-    const healthChance = zombie.isBoss ? 0.4 : 0.05;
-    const ammoChance = zombie.isBoss ? 0.6 : 0.18;
+    const table = zombie.isBoss
+        ? [["health", 0.30], ["ammo", 0.40], ["grenade", 0.15], ["molotov", 0.15]]
+        : [["health", 0.05], ["ammo", 0.18], ["grenade", 0.03], ["molotov", 0.03]];
 
     const roll = Math.random();
+    let total = 0;
 
-    if (roll < healthChance) {
-        spawnPickup("health", zombie.x, zombie.y);
-    } else if (roll < healthChance + ammoChance) {
-        spawnPickup("ammo", zombie.x, zombie.y);
+    for (const [type, chance] of table) {
+        total += chance;
+
+        if (roll < total) {
+            spawnPickup(type, zombie.x, zombie.y);
+            return;
+        }
     }
 }
 
@@ -1220,12 +1566,35 @@ function updatePickups() {
 
         if (pickup.type === "health") {
             // Can doluysa kalp yerde bekler
-            if (player.health >= 100) continue;
+            if (player.health >= player.maxHealth) continue;
 
-            player.health = Math.min(100, player.health + 20);
+            const heal = Math.round(20 * healMultiplier);
+
+            player.health = Math.min(player.maxHealth, player.health + heal);
             healthText.textContent = player.health;
 
-            addFloatingText(pickup.x, pickup.y - 20, "+20 CAN", "#ff6b6b");
+            addFloatingText(pickup.x, pickup.y - 20, `+${heal} CAN`, "#ff6b6b");
+        } else if (pickup.type === "grenade" || pickup.type === "molotov") {
+            const isGrenade = pickup.type === "grenade";
+            const current = isGrenade ? grenadeCount : molotovCount;
+
+            // Taşıma sınırı doluysa yerde bekler
+            if (current >= throwables.maxCarry) continue;
+
+            if (isGrenade) {
+                grenadeCount++;
+            } else {
+                molotovCount++;
+            }
+
+            updateThrowText();
+
+            addFloatingText(
+                pickup.x,
+                pickup.y - 20,
+                isGrenade ? "+1 BOMBA" : "+1 MOLOTOF",
+                "#ffb15c"
+            );
         } else {
             // Yedek mermi doluysa kutu yerde bekler
             if (reserveAmmo >= weapon.reserveMax) continue;
@@ -1298,7 +1667,7 @@ function drawPickups() {
             ctx.strokeStyle = "white";
             ctx.lineWidth = 2;
             ctx.stroke();
-        } else {
+        } else if (pickup.type === "ammo") {
             ctx.shadowColor = "#ffd54f";
             ctx.shadowBlur = 14;
 
@@ -1314,8 +1683,46 @@ function drawPickups() {
             ctx.fillRect(x - 9, y - 7, 5, 14);
             ctx.fillRect(x - 2, y - 7, 5, 14);
             ctx.fillRect(x + 5, y - 7, 5, 14);
-        }
+        } else if (pickup.type === "grenade") {
+            ctx.shadowColor = "#9acd5a";
+            ctx.shadowBlur = 14;
 
+            ctx.fillStyle = "#3f4f2a";
+            ctx.beginPath();
+            ctx.arc(x, y + 2, 11, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#c8e08a";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = "#c8e08a";
+            ctx.fillRect(x - 3, y - 13, 6, 5);
+            ctx.fillRect(x - 1, y - 16, 10, 3);
+        } else if (pickup.type === "molotov") {
+            ctx.shadowColor = "#ff9a2e";
+            ctx.shadowBlur = 14;
+
+            ctx.fillStyle = "rgba(110, 160, 90, 0.9)";
+            ctx.fillRect(x - 7, y - 4, 14, 17);
+            ctx.fillRect(x - 3, y - 11, 6, 8);
+
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#cfe6b0";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 7, y - 4, 14, 17);
+
+            ctx.fillStyle = "#ff8a1f";
+            ctx.beginPath();
+            ctx.arc(x, y - 15, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#ffe08a";
+            ctx.beginPath();
+            ctx.arc(x, y - 14, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 }
@@ -1395,13 +1802,22 @@ function updateWave() {
         score += wave * 20;
         scoreText.textContent = score;
 
-        player.health = Math.min(100, player.health + 10);
+        player.health = Math.min(player.maxHealth, player.health + 10);
         healthText.textContent = player.health;
 
         // Dalga bonusu: bir şarjör yedek mermi
         const weapon = weapons[selectedWeapon];
         reserveAmmo = Math.min(weapon.reserveMax, reserveAmmo + weapon.magSize);
         updateAmmoText();
+
+        // Dalga bonusu: elinde az olan fırlatılabilir silahtan bir tane
+        if (grenadeCount <= molotovCount) {
+            grenadeCount = Math.min(throwables.maxCarry, grenadeCount + 1);
+        } else {
+            molotovCount = Math.min(throwables.maxCarry, molotovCount + 1);
+        }
+
+        updateThrowText();
 
         waveBreakTimer = 180;
         showBanner(`DALGA ${wave} TAMAMLANDI`, 150);
@@ -1568,7 +1984,7 @@ function drawZombies() {
         // Büyük zombinin patlama menzilini hafifçe göster
         if (zombie.isBoss) {
             ctx.save();
-            ctx.strokeStyle = "rgba(120, 255, 60, 0.18)";
+            ctx.strokeStyle = mapThemes[selectedMap].dangerRing;
             ctx.lineWidth = 2;
             ctx.setLineDash([8, 8]);
             ctx.beginPath();
@@ -1677,13 +2093,16 @@ function drawBullets() {
 
         ctx.fillStyle = "#ffff00";
         ctx.fill();
+        ctx.strokeStyle = "rgba(90, 70, 0, 0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
     }
 }
 
 // ÇARPIŞMALARI KONTROL ETME
 function checkCollisions() {
-    for (let i = zombies.length - 1; i >= 0; i--) {
-        const zombie = zombies[i];
+    for (const zombie of zombies) {
+        if (zombie.dead) continue;
 
         for (let j = bullets.length - 1; j >= 0; j--) {
             const bullet = bullets[j];
@@ -1694,28 +2113,14 @@ function checkCollisions() {
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance < zombie.size / 2 + bullet.radius) {
-                zombie.health--;
-                zombie.hitFlash = 8;
-
                 bullets.splice(j, 1);
-
-                if (zombie.health <= 0) {
-                    zombies.splice(i, 1);
-
-                    score += zombie.isBoss ? 50 : 10;
-                    scoreText.textContent = score;
-
-                    dropLoot(zombie);
-
-                    if (zombie.isBoss) {
-                        createBossExplosion(zombie.x, zombie.y);
-                    }
-                }
-
+                damageZombie(zombie, 1);
                 break;
             }
         }
     }
+
+    purgeDeadZombies();
 
     if (player.damageCooldown > 0) {
         player.damageCooldown--;
@@ -1742,6 +2147,659 @@ function checkCollisions() {
     }
 }
 
+// ZOMBİYE HASAR VERME VE ÖLÜM (mermi, bomba ve yangın ortak kullanır)
+function damageZombie(zombie, amount) {
+    if (zombie.dead) return;
+
+    zombie.health -= amount;
+    zombie.hitFlash = 8;
+
+    if (zombie.health <= 0) {
+        killZombie(zombie);
+    }
+}
+
+function killZombie(zombie) {
+    zombie.dead = true;
+    kills++;
+
+    score += zombie.isBoss ? 50 : 10;
+    scoreText.textContent = score;
+
+    addBloodStain(zombie.x, zombie.y, zombie.isBoss);
+    dropLoot(zombie);
+
+    if (zombie.isBoss) {
+        createBossExplosion(zombie.x, zombie.y);
+    }
+}
+
+// Ölen zombileri listeden temizle
+function purgeDeadZombies() {
+    if (zombies.some((zombie) => zombie.dead)) {
+        zombies = zombies.filter((zombie) => !zombie.dead);
+    }
+}
+
+// BOMBA VE MOLOTOF
+function clampValue(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function updateThrowText() {
+    grenadeText.textContent = grenadeCount;
+    molotovText.textContent = molotovCount;
+
+    throwBombInfo.classList.toggle("throw-selected", selectedThrowable === "grenade");
+    throwMolotovInfo.classList.toggle("throw-selected", selectedThrowable === "molotov");
+
+    throwButton.textContent = selectedThrowable === "grenade" ? "💣" : "🔥";
+}
+
+function selectThrowable(type) {
+    if (type !== "grenade" && type !== "molotov") return;
+
+    selectedThrowable = type;
+    updateThrowText();
+}
+
+function switchThrowable() {
+    selectThrowable(selectedThrowable === "grenade" ? "molotov" : "grenade");
+}
+
+// Fare nereyi gösteriyorsa oraya atılır, ama en fazla maxRange kadar uzağa
+function getThrowTarget() {
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+
+    let dx = mouse.x - centerX;
+    let dy = mouse.y - centerY;
+
+    const distance = Math.hypot(dx, dy);
+    const clamped = distance > throwables.maxRange;
+
+    if (clamped) {
+        dx = (dx / distance) * throwables.maxRange;
+        dy = (dy / distance) * throwables.maxRange;
+    }
+
+    return {
+        x: clampValue(centerX + dx, 10, canvas.width - 10),
+        y: clampValue(centerY + dy, 10, canvas.height - 10),
+        distance: Math.min(distance, throwables.maxRange),
+        clamped: clamped
+    };
+}
+
+function getGrenadeRadius() {
+    // Güç artışı alanı yarı oranda büyütür (Joel: x1.3 güç = %15 daha geniş)
+    return throwables.grenade.radius * (1 + (grenadePower - 1) * 0.5);
+}
+
+function throwSelected() {
+    if (!gameStarted || gameOver || isPaused) return;
+    if (throwCooldown > 0) return;
+
+    const count = selectedThrowable === "grenade" ? grenadeCount : molotovCount;
+
+    if (count <= 0) {
+        addFloatingText(
+            player.x + player.width / 2,
+            player.y - 25,
+            selectedThrowable === "grenade" ? "BOMBA KALMADI!" : "MOLOTOF KALMADI!",
+            "#ff5555"
+        );
+
+        throwCooldown = 25;
+        return;
+    }
+
+    const target = getThrowTarget();
+
+    // Uzağa atılan daha uzun süre havada kalır
+    const flight = Math.round(30 + 25 * (target.distance / throwables.maxRange));
+
+    thrown.push({
+        type: selectedThrowable,
+        startX: player.x + player.width / 2,
+        startY: player.y + player.height / 2,
+        targetX: target.x,
+        targetY: target.y,
+        distance: target.distance,
+        t: 0,
+        flight: flight
+    });
+
+    if (selectedThrowable === "grenade") {
+        grenadeCount--;
+    } else {
+        molotovCount--;
+    }
+
+    throwCooldown = throwables.cooldown;
+    updateThrowText();
+    playThrowSound();
+}
+
+function updateThrown() {
+    if (throwCooldown > 0) throwCooldown--;
+
+    for (const item of thrown) {
+        item.t++;
+
+        if (item.t >= item.flight) {
+            item.landed = true;
+
+            if (item.type === "grenade") {
+                explodeGrenade(item.targetX, item.targetY);
+            } else {
+                startFire(item.targetX, item.targetY);
+            }
+        }
+    }
+
+    thrown = thrown.filter((item) => !item.landed);
+    purgeDeadZombies();
+}
+
+function explodeGrenade(x, y) {
+    const config = throwables.grenade;
+    const radius = getGrenadeRadius();
+    const damage = config.damage * grenadePower;
+
+    spawnExplosionEffect(x, y, radius, 32, "fire");
+    addShake(10, 20);
+    addScorch(x, y, radius * 0.45);
+    playExplosionSound();
+
+    // Merkeze yakın olan daha çok hasar alır, kenarda yarıya düşer
+    for (const zombie of zombies) {
+        if (zombie.dead) continue;
+
+        const distance = Math.hypot(zombie.x - x, zombie.y - y);
+
+        if (distance < radius + zombie.size * 0.3) {
+            const falloff = 1 - Math.min(distance / radius, 1) * 0.5;
+            damageZombie(zombie, damage * falloff);
+        }
+    }
+
+    // Çok yakına atarsan sen de zarar görürsün
+    if (throwables.friendlyFire) {
+        applyBlastDamage(x, y, radius * 0.8, config.playerDamage);
+    }
+}
+
+function startFire(x, y) {
+    const config = throwables.molotov;
+    const duration = Math.round(config.duration * fireDurationMultiplier);
+
+    fires.push({
+        x: x,
+        y: y,
+        radius: config.radius,
+        life: duration,
+        maxLife: duration,
+        tick: 0
+    });
+
+    spawnExplosionEffect(x, y, config.radius * 0.8, 14, "fire");
+    addShake(3, 8);
+    addScorch(x, y, config.radius * 0.6);
+    playFireSound();
+}
+
+function updateFires() {
+    const config = throwables.molotov;
+
+    for (const fire of fires) {
+        fire.life--;
+        fire.tick++;
+
+        if (fire.tick % config.tickEvery !== 0) continue;
+
+        for (const zombie of zombies) {
+            if (zombie.dead) continue;
+
+            const distance = Math.hypot(zombie.x - fire.x, zombie.y - fire.y);
+
+            if (distance < fire.radius + zombie.size * 0.3) {
+                damageZombie(zombie, config.tickDamage);
+            }
+        }
+
+        if (throwables.friendlyFire) {
+            const playerX = player.x + player.width / 2;
+            const playerY = player.y + player.height / 2;
+
+            if (Math.hypot(playerX - fire.x, playerY - fire.y) < fire.radius) {
+                damagePlayer(config.playerTick);
+
+                addFloatingText(
+                    playerX,
+                    playerY - 40,
+                    `-${config.playerTick} YANIK`,
+                    "#ff8a3d"
+                );
+            }
+        }
+    }
+
+    fires = fires.filter((fire) => fire.life > 0);
+    purgeDeadZombies();
+}
+
+function drawFires() {
+    for (const fire of fires) {
+        const fade = Math.min(1, fire.life / 60);
+
+        ctx.save();
+        ctx.globalAlpha = fade;
+
+        // Yerdeki ateş parıltısı
+        const glow = ctx.createRadialGradient(
+            fire.x, fire.y, 0,
+            fire.x, fire.y, fire.radius
+        );
+
+        glow.addColorStop(0, "rgba(255, 160, 50, 0.5)");
+        glow.addColorStop(0.7, "rgba(200, 70, 10, 0.28)");
+        glow.addColorStop(1, "rgba(120, 20, 0, 0)");
+
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(fire.x, fire.y, fire.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Titreyen alev dilleri
+        for (let i = 0; i < 10; i++) {
+            const angle = i * 0.628 + i * 0.7;
+            const distance = fire.radius * (0.12 + 0.6 * (((i * 37) % 10) / 10));
+            const flicker = Math.sin(frame * 0.25 + i * 1.9);
+
+            const size = 13 + 7 * flicker + (i % 3) * 3;
+            const px = fire.x + Math.cos(angle) * distance;
+            const py = fire.y + Math.sin(angle) * distance - 6 - 4 * flicker;
+
+            ctx.shadowColor = "#ff8a1f";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = "rgba(255, 120, 20, 0.85)";
+            ctx.beginPath();
+            ctx.arc(px, py, size, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "rgba(255, 225, 100, 0.9)";
+            ctx.beginPath();
+            ctx.arc(px, py - 2, size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+// Havadaki bomba ve molotof
+function drawThrown() {
+    for (const item of thrown) {
+        const p = item.t / item.flight; // 0'dan 1'e
+        const isGrenade = item.type === "grenade";
+        const radius = isGrenade ? getGrenadeRadius() : throwables.molotov.radius;
+
+        ctx.save();
+
+        // Düşeceği yeri gösteren halka
+        ctx.fillStyle = `rgba(255, 140, 30, ${0.07 + 0.1 * p})`;
+        ctx.beginPath();
+        ctx.arc(item.targetX, item.targetY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(item.targetX, item.targetY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(255, 170, 70, 0.85)";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([10, 8]);
+        ctx.beginPath();
+        ctx.arc(item.targetX, item.targetY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Yay çizerek uçuş
+        const groundX = item.startX + (item.targetX - item.startX) * p;
+        const groundY = item.startY + (item.targetY - item.startY) * p;
+        const height = Math.sin(Math.PI * p) * (50 + 60 * (item.distance / throwables.maxRange));
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.beginPath();
+        ctx.ellipse(groundX, groundY, 8, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.translate(groundX, groundY - height);
+        ctx.rotate(p * 14);
+
+        if (isGrenade) {
+            ctx.fillStyle = "#3f4f2a";
+            ctx.strokeStyle = "#1c2412";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "#c8e08a";
+            ctx.fillRect(-2.5, -13, 5, 5);
+        } else {
+            ctx.fillStyle = "rgba(120, 170, 100, 0.95)";
+            ctx.strokeStyle = "#2a3d22";
+            ctx.lineWidth = 2;
+            ctx.fillRect(-5, -2, 10, 14);
+            ctx.strokeRect(-5, -2, 10, 14);
+            ctx.fillRect(-2.5, -10, 5, 8);
+
+            ctx.shadowColor = "#ff8a1f";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = "#ff8a1f";
+            ctx.beginPath();
+            ctx.arc(0, -13, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+// Bombanın nereye düşeceğini gösteren silik nişan
+function drawAimPreview() {
+    if (!gameStarted || gameOver || isPaused) return;
+
+    const count = selectedThrowable === "grenade" ? grenadeCount : molotovCount;
+
+    if (count <= 0) return;
+
+    const target = getThrowTarget();
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+
+    const radius = selectedThrowable === "grenade"
+        ? getGrenadeRadius()
+        : throwables.molotov.radius;
+
+    ctx.save();
+
+    // Önce koyu alt çizgi (açık renkli haritada görünsün)
+    for (const pass of [0, 1]) {
+        ctx.strokeStyle = pass === 0
+            ? "rgba(0, 0, 0, 0.22)"
+            : (target.clamped ? "rgba(255, 130, 60, 0.7)" : "rgba(255, 255, 255, 0.5)");
+
+        ctx.lineWidth = pass === 0 ? 4 : 2;
+        ctx.setLineDash([6, 9]);
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = target.clamped ? "rgba(255, 130, 60, 0.9)" : "rgba(255, 255, 255, 0.85)";
+    ctx.beginPath();
+    ctx.arc(target.x, target.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// EFEKTLER: sarsıntı, kan, namlu ışığı, düşük can
+function addShake(strength, duration) {
+    const current = shakeTimer > 0 ? shakeStrength * (shakeTimer / shakeMax) : 0;
+
+    if (strength >= current) {
+        shakeStrength = strength;
+        shakeMax = duration;
+        shakeTimer = duration;
+    }
+}
+
+function updateEffects() {
+    if (shakeTimer > 0) shakeTimer--;
+    if (hurtFlash > 0) hurtFlash--;
+    if (muzzleFlash > 0) muzzleFlash--;
+
+    // Can azaldığında kalp atışı sesi
+    if (
+        player.health > 0 &&
+        player.health / player.maxHealth < 0.35 &&
+        frame % 75 === 0
+    ) {
+        playHeartbeat();
+    }
+
+    updateSnow();
+}
+
+function resetStains() {
+    if (!stainCanvas) {
+        stainCanvas = document.createElement("canvas");
+    }
+
+    stainCanvas.width = canvas.width;
+    stainCanvas.height = canvas.height;
+    stainCtx = stainCanvas.getContext("2d");
+}
+
+// Kalıcı kan lekesi (büyük zombide yeşilimsi sıvı)
+function addBloodStain(x, y, isBoss) {
+    if (!stainCtx) return;
+
+    const blobs = isBoss ? 10 : 5;
+
+    for (let i = 0; i < blobs; i++) {
+        stainCtx.fillStyle = isBoss
+            ? `rgba(55, 115, 30, ${rand(0.35, 0.55)})`
+            : `rgba(${Math.round(rand(95, 140))}, 8, 8, ${rand(0.35, 0.6)})`;
+
+        stainCtx.beginPath();
+        stainCtx.ellipse(
+            x + rand(-16, 16) * (isBoss ? 1.6 : 1),
+            y + rand(-16, 16) * (isBoss ? 1.6 : 1),
+            rand(4, 12) * (isBoss ? 1.5 : 1),
+            rand(3, 9) * (isBoss ? 1.5 : 1),
+            rand(0, Math.PI),
+            0,
+            Math.PI * 2
+        );
+        stainCtx.fill();
+    }
+}
+
+// Patlama sonrası yanık izi
+function addScorch(x, y, radius) {
+    if (!stainCtx) return;
+
+    const gradient = stainCtx.createRadialGradient(x, y, 0, x, y, radius);
+
+    gradient.addColorStop(0, "rgba(10, 8, 6, 0.55)");
+    gradient.addColorStop(0.6, "rgba(10, 8, 6, 0.3)");
+    gradient.addColorStop(1, "rgba(10, 8, 6, 0)");
+
+    stainCtx.fillStyle = gradient;
+    stainCtx.beginPath();
+    stainCtx.arc(x, y, radius, 0, Math.PI * 2);
+    stainCtx.fill();
+}
+
+function drawStains() {
+    if (stainCanvas) {
+        ctx.drawImage(stainCanvas, 0, 0);
+    }
+}
+
+function drawMuzzleFlash() {
+    if (muzzleFlash <= 0) return;
+
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+
+    const size = selectedWeapon === "shotgun" ? 36 : 22;
+    const tipX = centerX + Math.cos(muzzleAngle) * 40;
+    const tipY = centerY + Math.sin(muzzleAngle) * 40;
+
+    ctx.save();
+    ctx.globalAlpha = muzzleFlash / 3;
+
+    const glow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, size);
+    glow.addColorStop(0, "rgba(255, 245, 170, 0.95)");
+    glow.addColorStop(0.5, "rgba(255, 170, 50, 0.5)");
+    glow.addColorStop(1, "rgba(255, 120, 0, 0)");
+
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Namlu ucundan çıkan alev
+    ctx.translate(tipX, tipY);
+    ctx.rotate(muzzleAngle);
+    ctx.fillStyle = "rgba(255, 235, 130, 0.85)";
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.2);
+    ctx.lineTo(size * 1.5, 0);
+    ctx.lineTo(0, size * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Can azalınca ekran kenarları kızarır ve nabız gibi atar
+function drawLowHealth() {
+    if (!gameStarted || gameOver || player.maxHealth <= 0) return;
+
+    const ratio = player.health / player.maxHealth;
+
+    if (ratio >= 0.35 || player.health <= 0) return;
+
+    const pulse = (Math.sin(frame * 0.12) + 1) / 2;
+    const strength = (0.35 - ratio) / 0.35; // can azaldıkça artar
+
+    const gradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
+        canvas.width / 2, canvas.height / 2, canvas.width * 0.62
+    );
+
+    gradient.addColorStop(0, "rgba(150, 0, 0, 0)");
+    gradient.addColorStop(1, `rgba(150, 0, 0, ${0.25 + 0.2 * strength + 0.15 * pulse})`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawHurtFlash() {
+    if (hurtFlash <= 0) return;
+
+    ctx.fillStyle = `rgba(200, 0, 0, ${(hurtFlash / 12) * 0.22})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// BOMBA, YANGIN VE KALP ATIŞI SESLERİ
+function playThrowSound() {
+    if (!soundEnabled || !audioCtx) return;
+
+    playNoise(0.18, "bandpass", 500, 1600, 0.25);
+}
+
+function playExplosionSound() {
+    if (!soundEnabled || !audioCtx) return;
+
+    playNoise(0.6, "lowpass", 2200, 120, 1.0);
+    playNoise(0.08, "highpass", 3000, 1500, 0.5);
+    playThump(0.45, 100, 28, 1.0);
+}
+
+function playFireSound() {
+    if (!soundEnabled || !audioCtx) return;
+
+    playNoise(0.08, "highpass", 3500, 2000, 0.45); // cam kırılması
+    playNoise(0.5, "bandpass", 900, 300, 0.4);     // alev patlaması
+    playThump(0.2, 150, 50, 0.4);
+}
+
+function playHeartbeat() {
+    if (!soundEnabled || !audioCtx) return;
+
+    playThump(0.12, 70, 40, 0.6);
+
+    setTimeout(() => {
+        if (soundEnabled && audioCtx) playThump(0.1, 60, 38, 0.45);
+    }, 180);
+}
+
+// EN YÜKSEK SKORLAR (tarayıcıda saklanır, ilk 5)
+function loadHighScores() {
+    try {
+        const raw = loadChoice("scores");
+        const list = raw ? JSON.parse(raw) : [];
+
+        return Array.isArray(list) ? list : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function saveHighScore(entry) {
+    const list = loadHighScores();
+    const previousBest = list.length ? list[0].score : 0;
+
+    list.push(entry);
+    list.sort((a, b) => b.score - a.score);
+
+    const top = list.slice(0, 5);
+    saveChoice("scores", JSON.stringify(top));
+
+    return {
+        list: top,
+        isRecord: entry.score > previousBest && entry.score > 0
+    };
+}
+
+function formatTime(frames) {
+    const totalSeconds = Math.floor(frames / 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function renderHighScores(list, currentEntry) {
+    highScoreList.innerHTML = list.map((entry) => {
+        const css = entry === currentEntry ? "current-score" : "";
+
+        return `<li class="${css}">${entry.score} puan · Dalga ${entry.wave} · ${entry.kills} zombi</li>`;
+    }).join("");
+}
+
+function updateMenuBest() {
+    const list = loadHighScores();
+
+    if (list.length && list[0].score > 0) {
+        menuBest.textContent = `🏆 EN YÜKSEK SKOR: ${list[0].score}`;
+        menuBest.classList.remove("hidden");
+    } else {
+        menuBest.classList.add("hidden");
+    }
+}
+
+updateMenuBest();
+
 // OYUN BİTTİĞİNDE
 function endGame() {
     if (gameOver) return;
@@ -1755,6 +2813,17 @@ function endGame() {
     stopAnimation();
 
     finalScore.textContent = score;
+    finalKills.textContent = kills;
+    finalWave.textContent = wave;
+    finalTime.textContent = formatTime(frame);
+
+    const entry = { score: score, wave: wave, kills: kills };
+    const result = saveHighScore(entry);
+
+    newRecordText.classList.toggle("hidden", !result.isRecord);
+    renderHighScores(result.list, entry);
+    updateMenuBest();
+
     gameOverScreen.classList.remove("hidden");
 }
 
@@ -1798,22 +2867,41 @@ function pushOutOfObstacles(x, y, radius) {
 
 // HARİTA AYARLARI (engel sayısını ve sıklığını buradan değiştir)
 const mapSettings = {
-    trees: 7,          // ağaç sayısı
-    rocks: 4,          // kaya sayısı
     gap: 130,          // engeller arası en az boşluk (piksel)
-    centerClear: 200   // ortadaki boş bırakılan alanın yarıçapı
+    centerClear: 200,  // ortadaki boş bırakılan alanın yarıçapı
+    counts: {
+        forest: { trees: 7, rocks: 4 },
+        winter: { trees: 7, rocks: 3 }
+    }
 };
 
+// HARİTA TEMALARI
+const mapThemes = {
+    forest: {
+        name: "Orman",
+        dangerRing: "rgba(120, 255, 60, 0.18)", // büyük zombinin patlama halkası
+        snow: false
+    },
+    winter: {
+        name: "Kış",
+        dangerRing: "rgba(30, 110, 20, 0.5)",
+        snow: true
+    }
+};
+
+let selectedMap = "forest";
+
 // Rastgele ağaç ve kaya yerleştir
-function generateMap() {
-    obstacles = [];
+function createObstacles(themeKey) {
+    const list = [];
+    const counts = mapSettings.counts[themeKey];
 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
     const types = [
-        { type: "tree", count: mapSettings.trees },
-        { type: "rock", count: mapSettings.rocks }
+        { type: "tree", count: counts.trees },
+        { type: "rock", count: counts.rocks }
     ];
 
     for (const config of types) {
@@ -1831,13 +2919,13 @@ function generateMap() {
                 if (Math.hypot(x - centerX, y - centerY) < mapSettings.centerClear + r) continue;
 
                 // Engeller arasında geçiş için boşluk bırak
-                const tooClose = obstacles.some((o) => {
+                const tooClose = list.some((o) => {
                     return Math.hypot(o.x - x, o.y - y) < o.r + r + mapSettings.gap;
                 });
 
                 if (tooClose) continue;
 
-                obstacles.push({
+                list.push({
                     type: config.type,
                     x: x,
                     y: y,
@@ -1850,25 +2938,30 @@ function generateMap() {
         }
     }
 
-    buildMapCanvas();
+    return list;
 }
 
+function generateMap() {
+    obstacles = createObstacles(selectedMap);
+
+    buildMapCanvas();
+    createSnow();
+}
+
+// ORMAN: yaprak tacı
 function drawTreeOnMap(m, o) {
     const size = o.size;
 
-    // Gölge
     m.fillStyle = "rgba(0, 0, 0, 0.35)";
     m.beginPath();
     m.ellipse(o.x + 10, o.y + 14, size * 0.95, size * 0.8, 0, 0, Math.PI * 2);
     m.fill();
 
-    // Taç tabanı
     m.fillStyle = "#1b361b";
     m.beginPath();
     m.arc(o.x, o.y, size, 0, Math.PI * 2);
     m.fill();
 
-    // Yapraklardan oluşan tümsekler
     const greens = ["#27502a", "#2f6030", "#2a5a2c", "#336a34"];
     const lobes = 7;
 
@@ -1888,7 +2981,6 @@ function drawTreeOnMap(m, o) {
         m.fill();
     }
 
-    // Işık vuran yerler (sol üst)
     for (let i = 0; i < 4; i++) {
         m.fillStyle = "rgba(130, 190, 90, 0.22)";
         m.beginPath();
@@ -1903,7 +2995,70 @@ function drawTreeOnMap(m, o) {
     }
 }
 
-function drawRockOnMap(m, o) {
+// KIŞ: karla kaplı çam (üstten bakış, yıldız biçimli dallar)
+function drawPineOnMap(m, o) {
+    const size = o.size;
+
+    m.fillStyle = "rgba(20, 35, 55, 0.3)";
+    m.beginPath();
+    m.ellipse(o.x + 10, o.y + 14, size * 0.95, size * 0.8, 0, 0, Math.PI * 2);
+    m.fill();
+
+    const layers = [
+        { scale: 1.0, color: "#17382a" },
+        { scale: 0.78, color: "#1f4a35" },
+        { scale: 0.56, color: "#295c41" }
+    ];
+
+    layers.forEach((layer, index) => {
+        const spikes = 10;
+        const outer = size * layer.scale;
+        const inner = outer * 0.62;
+        const rotation = index * 0.3 + rand(-0.1, 0.1);
+
+        m.beginPath();
+
+        for (let i = 0; i < spikes * 2; i++) {
+            const angle = rotation + (i * Math.PI) / spikes;
+            const radius = i % 2 === 0 ? outer : inner;
+            const px = o.x + Math.cos(angle) * radius;
+            const py = o.y + Math.sin(angle) * radius;
+
+            if (i === 0) m.moveTo(px, py);
+            else m.lineTo(px, py);
+        }
+
+        m.closePath();
+        m.fillStyle = layer.color;
+        m.fill();
+    });
+
+    // Dallardaki kar
+    m.fillStyle = "rgba(245, 250, 255, 0.88)";
+
+    for (let i = 0; i < 7; i++) {
+        const angle = rand(0, Math.PI * 2);
+        const distance = rand(0, size * 0.65);
+
+        m.beginPath();
+        m.arc(
+            o.x + Math.cos(angle) * distance - size * 0.08,
+            o.y + Math.sin(angle) * distance - size * 0.08,
+            rand(size * 0.12, size * 0.22),
+            0,
+            Math.PI * 2
+        );
+        m.fill();
+    }
+
+    m.fillStyle = "#ffffff";
+    m.beginPath();
+    m.arc(o.x - size * 0.04, o.y - size * 0.04, size * 0.16, 0, Math.PI * 2);
+    m.fill();
+}
+
+// Kaya: orman (gri) ve kış (karlı) için ortak çizim
+function drawRockOnMap(m, o, snowy) {
     const size = o.size;
     const points = [];
     const sides = 9;
@@ -1918,55 +3073,45 @@ function drawRockOnMap(m, o) {
         });
     }
 
-    // Gölge
-    m.fillStyle = "rgba(0, 0, 0, 0.35)";
+    m.fillStyle = snowy ? "rgba(20, 35, 55, 0.3)" : "rgba(0, 0, 0, 0.35)";
     m.beginPath();
     m.ellipse(o.x + 6, o.y + 9, size * 1.05, size * 0.85, 0, 0, Math.PI * 2);
     m.fill();
 
-    // Kaya gövdesi
     m.beginPath();
     points.forEach((p, i) => {
         if (i === 0) m.moveTo(p.x, p.y);
         else m.lineTo(p.x, p.y);
     });
     m.closePath();
-    m.fillStyle = "#5b6159";
+    m.fillStyle = snowy ? "#6c7782" : "#5b6159";
     m.fill();
-    m.strokeStyle = "#383d37";
+    m.strokeStyle = snowy ? "#3f4a54" : "#383d37";
     m.lineWidth = 2;
     m.stroke();
 
-    // Işık vuran üst yüzey
+    // Işık vuran yüzey (kışta kar örtüsü)
+    const scale = snowy ? 0.66 : 0.6;
+    const shift = snowy ? 0.16 : 0.12;
+
     m.beginPath();
     points.forEach((p, i) => {
-        const x = o.x + (p.x - o.x) * 0.6 - size * 0.12;
-        const y = o.y + (p.y - o.y) * 0.6 - size * 0.12;
+        const x = o.x + (p.x - o.x) * scale - size * shift;
+        const y = o.y + (p.y - o.y) * scale - size * shift;
 
         if (i === 0) m.moveTo(x, y);
         else m.lineTo(x, y);
     });
     m.closePath();
-    m.fillStyle = "rgba(160, 168, 156, 0.4)";
+    m.fillStyle = snowy ? "rgba(245, 250, 255, 0.92)" : "rgba(160, 168, 156, 0.4)";
     m.fill();
 }
 
-// Zemini ve engelleri bir kez çiz (her karede tekrar çizmeyelim diye)
-function buildMapCanvas() {
-    if (!mapCanvas) {
-        mapCanvas = document.createElement("canvas");
-    }
-
-    mapCanvas.width = canvas.width;
-    mapCanvas.height = canvas.height;
-
-    const m = mapCanvas.getContext("2d");
-
-    // Zemin
+// ORMAN ZEMİNİ
+function drawForestGround(m, w, h) {
     m.fillStyle = "#182018";
-    m.fillRect(0, 0, canvas.width, canvas.height);
+    m.fillRect(0, 0, w, h);
 
-    // Zeminde açık/koyu çim ve toprak lekeleri
     const patchColors = [
         "rgba(45, 80, 40, 0.10)",
         "rgba(8, 18, 8, 0.14)",
@@ -1976,25 +3121,16 @@ function buildMapCanvas() {
     for (let i = 0; i < 110; i++) {
         m.fillStyle = patchColors[i % patchColors.length];
         m.beginPath();
-        m.ellipse(
-            rand(0, canvas.width),
-            rand(0, canvas.height),
-            rand(30, 120),
-            rand(20, 80),
-            rand(0, Math.PI),
-            0,
-            Math.PI * 2
-        );
+        m.ellipse(rand(0, w), rand(0, h), rand(30, 120), rand(20, 80), rand(0, Math.PI), 0, Math.PI * 2);
         m.fill();
     }
 
-    // Çim tutamları
     m.lineWidth = 1.5;
     m.lineCap = "round";
 
     for (let i = 0; i < 450; i++) {
-        const x = rand(0, canvas.width);
-        const y = rand(0, canvas.height);
+        const x = rand(0, w);
+        const y = rand(0, h);
 
         m.strokeStyle = `rgba(${rand(60, 100)}, ${rand(110, 150)}, ${rand(50, 80)}, 0.35)`;
 
@@ -2006,18 +3142,16 @@ function buildMapCanvas() {
         }
     }
 
-    // Küçük taşlar
     for (let i = 0; i < 70; i++) {
         m.fillStyle = "rgba(120, 125, 115, 0.35)";
         m.beginPath();
-        m.arc(rand(0, canvas.width), rand(0, canvas.height), rand(1.5, 3.5), 0, Math.PI * 2);
+        m.arc(rand(0, w), rand(0, h), rand(1.5, 3.5), 0, Math.PI * 2);
         m.fill();
     }
 
-    // Çalılar (sadece süs, içinden geçilir)
     for (let i = 0; i < 14; i++) {
-        const bx = rand(30, canvas.width - 30);
-        const by = rand(30, canvas.height - 30);
+        const bx = rand(30, w - 30);
+        const by = rand(30, h - 30);
 
         for (let blob = 0; blob < 4; blob++) {
             m.fillStyle = blob % 2 === 0 ? "#223f22" : "#2b4f2b";
@@ -2026,28 +3160,245 @@ function buildMapCanvas() {
             m.fill();
         }
     }
+}
 
-    // Engeller
-    for (const o of obstacles) {
+// KIŞ ZEMİNİ: karlı arazi, kar yığınları, donmuş su birikintileri
+function drawWinterGround(m, w, h) {
+    m.fillStyle = "#a9b8c4";
+    m.fillRect(0, 0, w, h);
+
+    const patchColors = [
+        "rgba(240, 247, 252, 0.20)",
+        "rgba(90, 115, 140, 0.14)",
+        "rgba(70, 90, 110, 0.10)"
+    ];
+
+    for (let i = 0; i < 110; i++) {
+        m.fillStyle = patchColors[i % patchColors.length];
+        m.beginPath();
+        m.ellipse(rand(0, w), rand(0, h), rand(30, 120), rand(20, 80), rand(0, Math.PI), 0, Math.PI * 2);
+        m.fill();
+    }
+
+    // Kar yığınları (altlarında gölge)
+    for (let i = 0; i < 45; i++) {
+        const x = rand(0, w);
+        const y = rand(0, h);
+        const rx = rand(35, 90);
+        const ry = rand(14, 34);
+        const rotation = rand(-0.3, 0.3);
+
+        m.fillStyle = "rgba(100, 125, 150, 0.22)";
+        m.beginPath();
+        m.ellipse(x + 4, y + 6, rx, ry, rotation, 0, Math.PI * 2);
+        m.fill();
+
+        m.fillStyle = "rgba(248, 252, 255, 0.45)";
+        m.beginPath();
+        m.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
+        m.fill();
+    }
+
+    // Donmuş su birikintileri
+    for (let i = 0; i < 5; i++) {
+        m.fillStyle = "rgba(140, 185, 215, 0.45)";
+        m.strokeStyle = "rgba(225, 242, 255, 0.6)";
+        m.lineWidth = 2;
+        m.beginPath();
+        m.ellipse(rand(80, w - 80), rand(80, h - 80), rand(30, 60), rand(16, 30), rand(0, Math.PI), 0, Math.PI * 2);
+        m.fill();
+        m.stroke();
+    }
+
+    // Karın altından çıkan kuru otlar
+    m.lineWidth = 1.5;
+    m.lineCap = "round";
+    m.strokeStyle = "rgba(95, 85, 72, 0.55)";
+
+    for (let i = 0; i < 140; i++) {
+        const x = rand(0, w);
+        const y = rand(0, h);
+
+        for (let blade = -1; blade <= 1; blade++) {
+            m.beginPath();
+            m.moveTo(x + blade * 3, y);
+            m.lineTo(x + blade * 5, y - rand(5, 10));
+            m.stroke();
+        }
+    }
+
+    // Kar parıltısı
+    for (let i = 0; i < 140; i++) {
+        m.fillStyle = "rgba(255, 255, 255, 0.7)";
+        m.beginPath();
+        m.arc(rand(0, w), rand(0, h), rand(0.8, 2), 0, Math.PI * 2);
+        m.fill();
+    }
+
+    // Karlı çalılar
+    for (let i = 0; i < 10; i++) {
+        const bx = rand(30, w - 30);
+        const by = rand(30, h - 30);
+
+        for (let blob = 0; blob < 4; blob++) {
+            m.fillStyle = blob % 2 === 0 ? "#2c4a45" : "#35564f";
+            m.beginPath();
+            m.arc(bx + rand(-12, 12), by + rand(-8, 8), rand(9, 15), 0, Math.PI * 2);
+            m.fill();
+        }
+
+        m.fillStyle = "rgba(248, 252, 255, 0.85)";
+        m.beginPath();
+        m.arc(bx - 3, by - 5, rand(8, 12), 0, Math.PI * 2);
+        m.fill();
+    }
+}
+
+// Seçilen temaya göre zemini ve engelleri verilen canvas'a çiz
+function drawMapScene(m, themeKey, list, w, h) {
+    if (themeKey === "winter") {
+        drawWinterGround(m, w, h);
+    } else {
+        drawForestGround(m, w, h);
+    }
+
+    for (const o of list) {
         if (o.type === "tree") {
-            drawTreeOnMap(m, o);
+            if (themeKey === "winter") drawPineOnMap(m, o);
+            else drawTreeOnMap(m, o);
         } else {
-            drawRockOnMap(m, o);
+            drawRockOnMap(m, o, themeKey === "winter");
         }
     }
 
     // Kenarları karartan atmosfer
     const vignette = m.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, canvas.height * 0.35,
-        canvas.width / 2, canvas.height / 2, canvas.width * 0.65
+        w / 2, h / 2, h * 0.35,
+        w / 2, h / 2, w * 0.65
     );
 
     vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-    vignette.addColorStop(1, "rgba(0, 0, 0, 0.45)");
+    vignette.addColorStop(
+        1,
+        themeKey === "winter" ? "rgba(10, 25, 45, 0.4)" : "rgba(0, 0, 0, 0.45)"
+    );
 
     m.fillStyle = vignette;
-    m.fillRect(0, 0, canvas.width, canvas.height);
+    m.fillRect(0, 0, w, h);
 }
+
+// Zemini ve engelleri bir kez çiz (her karede tekrar çizmeyelim diye)
+function buildMapCanvas() {
+    if (!mapCanvas) {
+        mapCanvas = document.createElement("canvas");
+    }
+
+    mapCanvas.width = canvas.width;
+    mapCanvas.height = canvas.height;
+
+    drawMapScene(
+        mapCanvas.getContext("2d"),
+        selectedMap,
+        obstacles,
+        canvas.width,
+        canvas.height
+    );
+}
+
+// KAR YAĞIŞI (sadece kış haritasında)
+function createSnow() {
+    snowflakes = [];
+
+    if (!mapThemes[selectedMap].snow) return;
+
+    for (let i = 0; i < 130; i++) {
+        snowflakes.push({
+            x: rand(0, canvas.width),
+            y: rand(0, canvas.height),
+            speed: rand(0.6, 1.8),
+            size: rand(1, 3),
+            phase: rand(0, 100)
+        });
+    }
+}
+
+function updateSnow() {
+    for (const flake of snowflakes) {
+        flake.y += flake.speed;
+        flake.x += Math.sin((frame + flake.phase) * 0.03) * 0.5 + 0.6;
+
+        if (flake.y > canvas.height) {
+            flake.y = -5;
+            flake.x = rand(0, canvas.width);
+        }
+
+        if (flake.x > canvas.width) {
+            flake.x = 0;
+        }
+    }
+}
+
+function drawSnow() {
+    if (snowflakes.length === 0) return;
+
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.beginPath();
+
+    for (const flake of snowflakes) {
+        ctx.moveTo(flake.x + flake.size, flake.y);
+        ctx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
+    }
+
+    ctx.fill();
+    ctx.restore();
+}
+
+// HARİTA SEÇİMİ (menüde küçük önizlemeler de aynı çizim koduyla yapılır)
+function renderMapPreviews() {
+    document.querySelectorAll("[data-preview]").forEach((previewCanvas) => {
+        const key = previewCanvas.dataset.preview;
+
+        if (!mapThemes[key]) return;
+
+        const temp = document.createElement("canvas");
+        temp.width = canvas.width;
+        temp.height = canvas.height;
+
+        drawMapScene(
+            temp.getContext("2d"),
+            key,
+            createObstacles(key),
+            canvas.width,
+            canvas.height
+        );
+
+        previewCanvas
+            .getContext("2d")
+            .drawImage(temp, 0, 0, previewCanvas.width, previewCanvas.height);
+    });
+}
+
+function selectMap(key, save = true) {
+    if (!mapThemes[key]) return;
+
+    document.querySelectorAll("[data-map]").forEach((item) => {
+        item.classList.toggle("selected", item.dataset.map === key);
+    });
+
+    selectedMap = key;
+
+    if (save) saveChoice("map", key);
+}
+
+document.querySelectorAll("[data-map]").forEach((card) => {
+    card.addEventListener("click", () => {
+        selectMap(card.dataset.map);
+    });
+});
+
+selectMap(loadChoice("map") || selectedMap, false);
+renderMapPreviews();
 
 // ARKA PLAN
 function drawBackground() {
@@ -2070,8 +3421,31 @@ function stopAnimation() {
 function resetGame() {
     player.x = canvas.width / 2 - player.width / 2;
     player.y = canvas.height / 2 - player.height / 2;
-    player.health = 100;
+    // Seçilen karakterin özelliklerini uygula
+    const stats = characterStats[selectedCharacter] || characterStats.player;
+
+    player.speed = stats.speed;
+    player.maxHealth = stats.maxHealth;
+    player.health = player.maxHealth;
     player.damageCooldown = 0;
+
+    reloadMultiplier = stats.reloadMultiplier;
+    healMultiplier = stats.healMultiplier;
+    grenadePower = stats.grenadePower;
+    fireDurationMultiplier = stats.fireDuration;
+
+    grenadeCount = stats.grenades;
+    molotovCount = stats.molotovs;
+    selectedThrowable = "grenade";
+    throwCooldown = 0;
+    thrown = [];
+    fires = [];
+
+    kills = 0;
+    shakeTimer = 0;
+    hurtFlash = 0;
+    muzzleFlash = 0;
+    resetStains();
 
     zombies = [];
     bullets = [];
@@ -2108,6 +3482,7 @@ function resetGame() {
     healthText.textContent = player.health;
     finalScore.textContent = score;
     updateAmmoText();
+    updateThrowText();
 
     startWave(1);
 
@@ -2130,6 +3505,9 @@ function update() {
     updateWave();
     updatePickups();
     updateExplosions();
+    updateThrown();
+    updateFires();
+    updateEffects();
 
     moveZombies();
     updateBombs();
@@ -2139,14 +3517,39 @@ function update() {
 
 // ÇİZİM
 function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+
+    // Ekran sarsıntısı
+    if (shakeTimer > 0) {
+        const magnitude = shakeStrength * (shakeTimer / shakeMax);
+
+        ctx.translate(
+            (Math.random() * 2 - 1) * magnitude,
+            (Math.random() * 2 - 1) * magnitude
+        );
+    }
+
     drawBackground();
+    drawStains();
     drawPickups();
+    drawFires();
     drawPlayer();
+    drawMuzzleFlash();
     drawZombies();
     drawBombs();
+    drawThrown();
     drawBullets();
     drawExplosions();
+    drawAimPreview();
     drawReloadBar();
+    drawSnow();
+
+    ctx.restore();
+
+    drawLowHealth();
+    drawHurtFlash();
     drawFloatingTexts();
     drawBanner();
 }
@@ -2235,6 +3638,7 @@ resumeButton.addEventListener("click", resumeGame);
 // ANA MENÜYE DÖNME
 function returnToMenu() {
     stopAnimation();
+    cancelCountdown();
 
     gameStarted = false;
     gameOver = false;
@@ -2255,6 +3659,9 @@ function returnToMenu() {
     if (screen.orientation && screen.orientation.unlock) {
         screen.orientation.unlock();
     }
+
+    // Menü kaydırılabilir bir sayfa, o yüzden tam ekrandan çık
+    exitFullscreen();
 }
 
 pauseMenuButton.addEventListener("click", returnToMenu);
@@ -2267,6 +3674,11 @@ function updateOrientationWarning() {
 
     if (isMobile && isPortrait && gameStarted) {
         orientationWarning.classList.remove("hidden");
+
+        // Uyarı açıkken oyun arkada akıp gitmesin
+        if (!isPaused && !gameOver) {
+            pauseGame();
+        }
     } else {
         orientationWarning.classList.add("hidden");
     }
